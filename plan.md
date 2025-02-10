@@ -1,4 +1,4 @@
-**Project: CSC2218 Note-Taking App Development Plan (Kivy + Firebase)**
+**Project: CSC2218 Note-Taking App Development Plan (Flet + Firebase)**
 
 ---
 
@@ -7,8 +7,8 @@
 
 #### Tasks:  
 - **Git Configuration**  
-  - Create private GitLab repo: “CSC2218 Group X Project 2025”  
-  - Set up `.gitignore` for Python/Kivy project  
+  - Create private GitLab repo: “CSC2218 Group 4 Project 2025”  
+  - Set up `.gitignore` for Python/Flet project  
   - Initialize `README.md` with project overview  
 
 - **Development Environment**  
@@ -21,12 +21,12 @@
     ```
   - Install essential libraries:  
     ```bash
-    pip install kivy kivymd firebase-admin requests pytest
+    pip install flet firebase-admin requests pytest
     ```
   
 - **IDE Setup**  
-  - Install PyCharm or VS Code with Python/Kivy plugins  
-  - Configure Kivy preview tools  
+  - Install PyCharm or VS Code with Python/Flet plugins  
+  - Configure Flet preview tools  
   - Set up GitLab integration plugin  
   
 ---
@@ -41,8 +41,8 @@
   - CRUD operations in `database.py`  
   - Note model implementation (`note.py`)  
 
-- **Basic UI (Kivy/KivyMD)**  
-  - Main screen with `RecycleView` for notes  
+- **Basic UI (Flet)**  
+  - Main screen with `ListView` for notes  
   - Note creation/edit dialog layout  
   - Floating Action Button for note creation  
 
@@ -55,7 +55,7 @@
   - Python text formatting utilities  
 
 - **Tagging System**  
-  - Kivy `Chip` UI component for tags  
+  - Flet `Chips` UI component for tags  
   - Firestore tag relationship implementation  
 
 - **Firebase Cloud Storage Integration**  
@@ -67,12 +67,12 @@
 
 ##### Tasks:  
 - **Reminder System**  
-  - Kivy notification scheduling  
+  - Flet notification scheduling  
   - Python `datetime` utilities  
   
 - **Label/Filter System**  
   - Multi-label Firestore architecture  
-  - Filterable `RecycleView` adapter  
+  - Filterable `ListView` adapter  
 
 ---
 
@@ -81,14 +81,14 @@
 
 #### Test Schedule:  
 - Weekly `pytest` runs (Python logic)  
-- Bi-weekly UI validation using Kivy unit tests  
+- Bi-weekly UI validation using Flet unit tests  
 - Final Week: Full test suite execution  
 
 #### Test Types & Tools:  
 | Test Type       | Tools              | Coverage                      |
 |----------------|-------------------|-------------------------------|
 | Unit          | Pytest             | Database ops, Note model logic |
-| Integration   | Kivy Unit Tests    | UI workflow validation        |
+| Integration   | Flet Unit Tests    | UI workflow validation        |
 | Performance   | Memory Profiler    | Memory/CPU usage monitoring   |
 | Device Testing | Firebase Test Lab | Cross-device compatibility    |
 
@@ -111,7 +111,7 @@
 
 ### 5. Risk Management  
 **Identified Risks:**  
-1. Kivy Firebase compatibility issues  
+1. Flet Firebase compatibility issues  
    *Mitigation:* Use REST API instead of Firebase SDK where needed  
 2. Android permission handling for notifications  
    *Mitigation:* Ensure correct `AndroidManifest.xml` configuration  
