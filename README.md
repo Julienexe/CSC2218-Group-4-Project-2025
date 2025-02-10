@@ -1,2 +1,2 @@
 # note-app
-##  Note taking app in Kivy and Firebase
+##  Note taking app in Flet and Firebase
