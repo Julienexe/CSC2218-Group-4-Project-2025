@@ -2,10 +2,8 @@ import flet as ft
 import firebase_admin
 from firebase_admin import auth, credentials
 import requests
+from firebase_db import FirebaseDB
 
-# Initialize Firebase
-cred = credentials.Certificate(r"CSC2218-Group-4-Project-2025/serviceAccountKey.json")
-firebase_admin.initialize_app(cred)
 
 
 class AuthManager:
@@ -16,6 +14,11 @@ class AuthManager:
         """Registers a new user in Firebase Auth"""
         try:
             user = auth.create_user(email=email, password=password)
+            #add user to collection in db and create if it does not exist
+            db = FirebaseDB()
+            db.add_user(user.uid, email)
+            
+            
             return {"success": True, "message": f"User {user.uid} created successfully.", 'userid': user.uid}
         except Exception as e:
             return {"success": False, "message": str(e)}
