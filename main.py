@@ -1,9 +1,12 @@
 import flet as ft
+import firebase_admin
+from firebase_admin import auth, credentials
+# Initialize Firebase
+cred = credentials.Certificate(r"C:/Users/Admin/Desktop/Notes App/CSC2218-Group-4-Project-2025\serviceAccountKey.json")
+firebase_admin.initialize_app(cred)
+
 from auth import AuthManager
 from n0tes3 import NotesApp
-
-
-
 # This function will navigate the user to the NotesApp after login
 def navigate_to_notes(page: ft.Page, user_id: str):
     """Navigates to the NotesApp screen after login"""
