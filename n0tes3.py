@@ -144,7 +144,12 @@ class NotesApp(ft.Column):
             border_color="#4CAF50",
         )
         
-        self.categories = ft.Column()
+        # Use a ListView for scrollable categories
+        self.categories = ft.ListView(
+            expand=True,  # Make the ListView expand to fill available space
+            spacing=10,  # Add spacing between items
+            padding=10,  # Add padding around the ListView
+)
         self.active_category = None
         
         # Input container with properly organized layout
@@ -191,12 +196,20 @@ class NotesApp(ft.Column):
             on_click=self.show_input_fields
         )
 
+        
         self.controls = [
-            ft.Text("Hello, User!", size=24, weight=ft.FontWeight.BOLD, color="white"),
-            self.input_container,
-            self.categories,
+            ft.Column(
+                expand=True,  # Make the Column expand to fill available space
+                controls=[
+                    ft.Text("Hello, User!", size=24, weight=ft.FontWeight.BOLD, color="white"),
+                    self.input_container,
+                    ft.Container(
+                        content=self.categories,
+                        expand=True,  # Make the ListView expand to fill available space
+                    ),
+                ],
+            ),
             # Spacer to push the add button to the bottom
-            ft.Container(expand=True),
             ft.Container(
                 content=self.add_button,
                 alignment=ft.alignment.bottom_right,
