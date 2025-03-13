@@ -2,7 +2,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 # Initialize Firebase
-cred = credentials.Certificate(r"C:/Users/Admin/Desktop/Notes App/CSC2218-Group-4-Project-2025\serviceAccountKey.json")
+cred = credentials.Certificate(r"C:/Users/ARNOLD/Desktop/SC/CSC2218-Group-4-Project-2025/serviceAccountKey.json")
 # Initialize Firebase Admin SDK
 # firebase_admin.initialize_app(cred)
 
