@@ -24,28 +24,28 @@ class FirebaseDB:
             return []
     
     @staticmethod
-    def add_user(user_id:str,email:str):
+    def add_user(user_id:str, email:str):
         """Adds a new user to Firestore
         ARGS:
         user_id (str): The unique ID of the user
         email (str): The email of the user
         """
         try:
-            #add user to users collection, create it if it does not exist
+            # Add user to users collection, create it if it does not exist
             users_ref = db.collection("users")
-            users_ref.document(user_id).set({"email":email})
+            users_ref.document(user_id).set({"email": email})
         except Exception as e:
             print(f"Error adding user: {e}")
             
     @staticmethod
-    def add_note(user_id, category, note_text):
+    def add_note(user_id, category, note_text, font_family="Arial"):
         """
         Adds a note to the general notes collection and updates the user's document 
         with a reference to the note under the specified category
         """
         try:
             # First add the note to the general collection
-            note_ref = FirebaseDB.add_note_to_general_collection(user_id, note_text)
+            note_ref = FirebaseDB.add_note_to_general_collection(user_id, note_text, font_family)
             
             if not note_ref:
                 print("Failed to create note in general collection")
@@ -87,7 +87,7 @@ class FirebaseDB:
             return None
         
     @staticmethod
-    def add_note_to_general_collection(user_id: str, note_text: str):
+    def add_note_to_general_collection(user_id: str, note_text: str, font_family: str = "Arial"):
         """
         Adds a new note to Firestore
         Returns the document reference for the newly created note
@@ -98,6 +98,7 @@ class FirebaseDB:
             _, new_note_ref = notes_ref.add({
                 "text": note_text,
                 "user_id": user_id,
+                "font_family": font_family,  # Include the font family
                 "timestamp": firestore.SERVER_TIMESTAMP  # Adding a timestamp for sorting if needed
             })
             
@@ -108,9 +109,8 @@ class FirebaseDB:
             print(f"Error adding note: {e}")
             return None
         
-    #edit notes
     @staticmethod
-    def edit_note(note_id: str, note_text: str, user_id: str, category: str):
+    def edit_note(note_id: str, note_text: str, user_id: str, category: str, font_family: str = "Arial"):
         """
         Edits a note in the general notes collection
         
@@ -119,6 +119,7 @@ class FirebaseDB:
         - note_text: The new text for the note
         - user_id: The ID of the user who owns the note (for validation)
         - category: The category the note belongs to (not used in this implementation but kept for compatibility)
+        - font_family: The font family to use for the note
         
         Returns:
         - True if the edit was successful, False otherwise
@@ -141,9 +142,10 @@ class FirebaseDB:
                 print(f"Note {note_id} does not belong to user {user_id}")
                 return False
             
-            # Update the note text
+            # Update the note text and font family
             note_ref.update({
                 "text": note_text,
+                "font_family": font_family,  # Update the font family
                 "timestamp": firestore.SERVER_TIMESTAMP  # Update timestamp for sorting
             })
             
@@ -213,7 +215,7 @@ class FirebaseDB:
         Fetch all categories with their notes from Firestore
         Returns a dictionary where:
         - Keys are category names
-        - Values are lists of note objects with 'id' and 'text' fields
+        - Values are lists of note objects with 'id', 'text', and 'font_family' fields
         """
         # Create a dictionary to store categories and their notes
         categories_dict = {}
@@ -247,11 +249,11 @@ class FirebaseDB:
                                 # Get the note data
                                 note_data = note_doc.to_dict()
                                 
-                                # Add the note ID and data to our list
+                                # Add the note ID, text, and font_family to our list
                                 notes_list.append({
                                     "id": note_doc.id,
-                                    "text": note_data.get("text", "")
-                                    # Add any other fields you need from the note
+                                    "text": note_data.get("text", ""),
+                                    "font_family": note_data.get("font_family", "Arial")  # Include the font family
                                 })
                             else:
                                 print(f"Note {note_ref.id} referenced in {field_name} doesn't exist")
