@@ -51,7 +51,14 @@ class Note(ft.Container):
     def save_clicked(self, e):
         new_text = self.content.controls[0].value
         self.note_text = new_text
-        FirebaseDB.edit_note(note_id=self.note_id, note_text=self.note_text, user_id=self.user_id, category=self.category)
+        # Include the font family when editing the note
+        FirebaseDB.edit_note(
+            note_id=self.note_id, 
+            note_text=self.note_text, 
+            user_id=self.user_id, 
+            category=self.category,
+            font_family=self.font_family  # Pass the font family
+        )
         # Replace the TextField with a Text widget and reapply the font family
         self.content.controls[0] = ft.Text(
             self.note_text, 
@@ -149,7 +156,7 @@ class NotesApp(ft.Column):
             expand=True,  # Make the ListView expand to fill available space
             spacing=10,  # Add spacing between items
             padding=10,  # Add padding around the ListView
-)
+        )
         self.active_category = None
         
         # Input container with properly organized layout
@@ -196,7 +203,6 @@ class NotesApp(ft.Column):
             on_click=self.show_input_fields
         )
 
-        
         self.controls = [
             ft.Column(
                 expand=True,  # Make the Column expand to fill available space
@@ -220,7 +226,7 @@ class NotesApp(ft.Column):
         self.page.bgcolor = "#121E38"  # Deep navy blue background
 
     def show_input_fields(self, e):
-    # Update dropdown with current categories
+        # Update dropdown with current categories
         self.category_dropdown.options.clear()
         existing_categories = [
             c.content.controls[0].value 
@@ -268,7 +274,8 @@ class NotesApp(ft.Column):
                     note["text"], 
                     self.note_delete, 
                     category_name,  
-                    self.userID     
+                    self.userID,
+                    font_family=note.get("font_family", "Arial")  # Use the saved font family
                 ) for note in notes_list
             ]
             
@@ -322,10 +329,11 @@ class NotesApp(ft.Column):
             
         note_text = self.new_note.value.strip()
         if category and note_text:
-            note_id = FirebaseDB.add_note(self.userID, category, note_text)
+            # Use the selected font from the dropdown
+            selected_font = self.font_dropdown.value
+            # Include the font family when adding the note
+            note_id = FirebaseDB.add_note(self.userID, category, note_text, font_family=selected_font)
             if note_id:
-                # Use the selected font from the dropdown
-                selected_font = self.font_dropdown.value
                 new_note = Note(note_id, note_text, self.note_delete, category, self.userID, font_family=selected_font)
                 category_container = next((c for c in self.categories.controls if isinstance(c, ft.Container) and c.content.controls[0].value == category), None)
                 if category_container:
