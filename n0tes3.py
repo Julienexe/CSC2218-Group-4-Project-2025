@@ -2,13 +2,14 @@ import flet as ft
 from firebase_db import FirebaseDB
 
 class Note(ft.Container):
-    def __init__(self, note_id, note_text, note_delete, category, user_id):
+    def __init__(self, note_id, note_text, note_delete, category, user_id, font_family="Arial"):
         super().__init__()
         self.note_id = note_id
         self.note_text = note_text
         self.category = category
         self.user_id = user_id
         self.note_delete = note_delete
+        self.font_family = font_family  # Store the font family
 
         self.bgcolor = "#1E2A47"  # Dark blue background for contrast
         self.border_radius = 12
@@ -19,7 +20,7 @@ class Note(ft.Container):
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Text(self.note_text, color="white", expand=True),
+                ft.Text(self.note_text, color="white", expand=True, font_family=self.font_family),  # Set font here
                 ft.Row(
                     spacing=0,
                     visible=False,  # Initially hidden
@@ -32,16 +33,38 @@ class Note(ft.Container):
         )
 
     def edit_clicked(self, e):
-        self.content.controls[0] = ft.TextField(value=self.note_text, expand=True, color="white", bgcolor="#2D3B60")
-        self.content.controls[1].controls[0] = ft.IconButton(icon=ft.icons.DONE_OUTLINE_OUTLINED, icon_color="green", tooltip="Save Note", on_click=self.save_clicked)
+        # Replace the Text widget with a TextField for editing
+        self.content.controls[0] = ft.TextField(
+            value=self.note_text, 
+            expand=True, 
+            color="white", 
+            bgcolor="#2D3B60",
+        )
+        self.content.controls[1].controls[0] = ft.IconButton(
+            icon=ft.icons.DONE_OUTLINE_OUTLINED, 
+            icon_color="green", 
+            tooltip="Save Note", 
+            on_click=self.save_clicked
+        )
         self.update()
 
     def save_clicked(self, e):
         new_text = self.content.controls[0].value
         self.note_text = new_text
         FirebaseDB.edit_note(note_id=self.note_id, note_text=self.note_text, user_id=self.user_id, category=self.category)
-        self.content.controls[0] = ft.Text(self.note_text, color="white", expand=True)
-        self.content.controls[1].controls[0] = ft.IconButton(icon=ft.icons.CREATE_OUTLINED, icon_color="white", tooltip="Edit Note", on_click=self.edit_clicked)
+        # Replace the TextField with a Text widget and reapply the font family
+        self.content.controls[0] = ft.Text(
+            self.note_text, 
+            color="white", 
+            expand=True, 
+            font_family=self.font_family  # Reapply the font family
+        )
+        self.content.controls[1].controls[0] = ft.IconButton(
+            icon=ft.icons.CREATE_OUTLINED, 
+            icon_color="white", 
+            tooltip="Edit Note", 
+            on_click=self.edit_clicked
+        )
         self.update()
 
     def delete_clicked(self, e):
@@ -94,6 +117,33 @@ class NotesApp(ft.Column):
             
         )
         
+        # Dropdown for font selection
+        self.font_dropdown = ft.Dropdown(
+            hint_text="Select Font",
+            options=[
+                ft.dropdown.Option("Arial"),
+                ft.dropdown.Option("Times New Roman"),
+                ft.dropdown.Option("Courier New"),
+                ft.dropdown.Option("Verdana"),
+                ft.dropdown.Option("Georgia"),
+                ft.dropdown.Option("Comic Sans MS"),
+                ft.dropdown.Option("Impact"),
+                ft.dropdown.Option("Lucida Console"),
+                ft.dropdown.Option("Tahoma"),
+                ft.dropdown.Option("Trebuchet MS"),
+                ft.dropdown.Option("Palatino Linotype"),
+                ft.dropdown.Option("Garamond"),
+                ft.dropdown.Option("Book Antiqua"),
+                ft.dropdown.Option("Arial Black"),
+                ft.dropdown.Option("Courier"),
+            ],
+            value="Arial",  # Default font
+            expand=True,
+            bgcolor="#2D3B60",
+            color="white",
+            border_color="#4CAF50",
+        )
+        
         self.categories = ft.Column()
         self.active_category = None
         
@@ -117,6 +167,12 @@ class NotesApp(ft.Column):
                 ft.Row([
                     ft.Text("Note:", width=80, color="white"),
                     self.new_note
+                ], alignment=ft.MainAxisAlignment.START),
+                
+                # Row for font selection
+                ft.Row([
+                    ft.Text("Font:", width=80, color="white"),
+                    self.font_dropdown
                 ], alignment=ft.MainAxisAlignment.START),
                 
                 # Buttons row
@@ -254,7 +310,9 @@ class NotesApp(ft.Column):
         if category and note_text:
             note_id = FirebaseDB.add_note(self.userID, category, note_text)
             if note_id:
-                new_note = Note(note_id, note_text, self.note_delete, category, self.userID)
+                # Use the selected font from the dropdown
+                selected_font = self.font_dropdown.value
+                new_note = Note(note_id, note_text, self.note_delete, category, self.userID, font_family=selected_font)
                 category_container = next((c for c in self.categories.controls if isinstance(c, ft.Container) and c.content.controls[0].value == category), None)
                 if category_container:
                     category_container.content.controls.append(new_note)
