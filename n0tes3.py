@@ -92,10 +92,10 @@ class NotesApp(ft.Column):
             bgcolor="#2D3B60", 
             color="white",
             border_color="#4CAF50",
-            min_lines=1,
-            max_lines=3
+            multiline=True,  # Enable multi-line input
+            min_lines=3,     # Minimum height (3 lines)
+            max_lines=10,    # Maximum height (10 lines)
         )
-        
         # Text field for direct category input
         self.category_input = ft.TextField(
             hint_text="Enter category (new or existing)",
@@ -209,7 +209,7 @@ class NotesApp(ft.Column):
                     ),
                 ],
             ),
-            # Spacer to push the add button to the bottom
+            # Add button at the bottom right
             ft.Container(
                 content=self.add_button,
                 alignment=ft.alignment.bottom_right,
@@ -220,7 +220,7 @@ class NotesApp(ft.Column):
         self.page.bgcolor = "#121E38"  # Deep navy blue background
 
     def show_input_fields(self, e):
-        # Update dropdown with current categories
+    # Update dropdown with current categories
         self.category_dropdown.options.clear()
         existing_categories = [
             c.content.controls[0].value 
@@ -241,7 +241,8 @@ class NotesApp(ft.Column):
         self.category_dropdown.on_change = self.on_category_selected
             
         self.input_container.visible = True
-        self.controls[4].visible = False  # Hide add button
+        # Hide the add button
+        self.add_button.visible = False  # Directly reference the add button
         self.page.update()
     
     def on_category_selected(self, e):
@@ -254,7 +255,7 @@ class NotesApp(ft.Column):
         self.new_note.value = ""
         self.category_input.value = ""
         self.category_dropdown.value = None
-        self.controls[4].visible = True  # Show add button
+        self.add_button.visible = True  # Show add button
         self.page.update()
 
     def load_notes(self, e=None):
@@ -348,7 +349,7 @@ class NotesApp(ft.Column):
                 self.category_input.value = ""
                 self.category_dropdown.value = None
                 self.input_container.visible = False
-                self.controls[4].visible = True  # Show add button again
+                self.add_button.visible = True  # Show add button again
                 self.page.update()
 
     def note_delete(self, note):
