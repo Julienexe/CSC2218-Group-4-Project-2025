@@ -2,7 +2,7 @@ import flet as ft
 import firebase_admin
 from firebase_admin import auth, credentials
 # Initialize Firebase
-cred = credentials.Certificate(r"C:/Users/Admin/Desktop/Notes App/CSC2218-Group-4-Project-2025\serviceAccountKey.json")
+cred = credentials.Certificate(r"C:/Users/ARNOLD/Desktop/SC/CSC2218-Group-4-Project-2025/serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 
 from auth import AuthManager
