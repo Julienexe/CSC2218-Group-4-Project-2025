@@ -2,7 +2,22 @@ import flet as ft
 from firebase_db import FirebaseDB
 
 class Note(ft.Container):
+    """
+    A custom Container widget representing a single note.
+    Each note contains text, an edit button, and a delete button.
+    """
     def __init__(self, note_id, note_text, note_delete, category, user_id, font_family="Arial"):
+        """
+        Initialize a Note instance.
+
+        Args:
+            note_id (str): Unique identifier for the note.
+            note_text (str): The text content of the note.
+            note_delete (function): Callback function to delete the note.
+            category (str): The category to which the note belongs.
+            user_id (str): The ID of the user who owns the note.
+            font_family (str, optional): The font family for the note text. Defaults to "Arial".
+        """
         super().__init__()
         self.note_id = note_id
         self.note_text = note_text
@@ -11,6 +26,7 @@ class Note(ft.Container):
         self.note_delete = note_delete
         self.font_family = font_family  # Store the font family
 
+        # Styling for the note container
         self.bgcolor = "#1E2A47"  # Dark blue background for contrast
         self.border_radius = 12
         self.padding = 10
@@ -33,7 +49,9 @@ class Note(ft.Container):
         )
 
     def edit_clicked(self, e):
-        # Replace the Text widget with a TextField for editing
+        """
+        Replace the Text widget with a TextField for editing the note.
+        """
         self.content.controls[0] = ft.TextField(
             value=self.note_text, 
             expand=True, 
@@ -49,6 +67,9 @@ class Note(ft.Container):
         self.update()
 
     def save_clicked(self, e):
+        """
+        Save the edited note text and update the Firebase database.
+        """
         new_text = self.content.controls[0].value
         self.note_text = new_text
         # Include the font family when editing the note
@@ -75,19 +96,39 @@ class Note(ft.Container):
         self.update()
 
     def delete_clicked(self, e):
+        """
+        Trigger the note deletion process.
+        """
         self.note_delete(self)
     
     def show_buttons(self):
+        """
+        Show the edit and delete buttons for the note.
+        """
         self.content.controls[1].visible = True
         self.update()
     
     def hide_buttons(self):
+        """
+        Hide the edit and delete buttons for the note.
+        """
         self.content.controls[1].visible = False
         self.update()
 
 
 class NotesApp(ft.Column):
+    """
+    A custom Column widget representing the main notes application.
+    It includes input fields for adding new notes and displays existing notes by category.
+    """
     def __init__(self, page: ft.Page, userId):
+        """
+        Initialize the NotesApp instance.
+
+        Args:
+            page (ft.Page): The Flet page object.
+            userId (str): The ID of the user.
+        """
         super().__init__()
         self.userID = userId
         self.page = page
@@ -207,7 +248,7 @@ class NotesApp(ft.Column):
             ft.Column(
                 expand=True,  # Make the Column expand to fill available space
                 controls=[
-                    ft.Text("Hello, User!", size=24, weight=ft.FontWeight.BOLD, color="white"),
+                    ft.Text("Notes!", size=24, weight=ft.FontWeight.BOLD, color="white"),
                     self.input_container,
                     ft.Container(
                         content=self.categories,
@@ -226,6 +267,9 @@ class NotesApp(ft.Column):
         self.page.bgcolor = "#121E38"  # Deep navy blue background
 
     def show_input_fields(self, e):
+        """
+        Show the input fields for adding a new note.
+        """
         # Update dropdown with current categories
         self.category_dropdown.options.clear()
         existing_categories = [
@@ -252,11 +296,17 @@ class NotesApp(ft.Column):
         self.page.update()
     
     def on_category_selected(self, e):
+        """
+        Update the category input field when a category is selected from the dropdown.
+        """
         if self.category_dropdown.value:
             self.category_input.value = self.category_dropdown.value
             self.page.update()
         
     def cancel_input(self, e):
+        """
+        Cancel the input process and hide the input fields.
+        """
         self.input_container.visible = False
         self.new_note.value = ""
         self.category_input.value = ""
@@ -265,6 +315,9 @@ class NotesApp(ft.Column):
         self.page.update()
 
     def load_notes(self, e=None):
+        """
+        Load notes from Firebase and display them in the UI.
+        """
         self.categories.controls.clear()
         categories_data = FirebaseDB.get_categories(self.userID)
         for category_name, notes_list in categories_data.items():
@@ -297,6 +350,9 @@ class NotesApp(ft.Column):
         self.page.update()
 
     def toggle_category(self, category_container):
+        """
+        Toggle the visibility of buttons for notes in a category.
+        """
         # If there's an active category, hide its buttons
         if self.active_category and self.active_category != category_container:
             notes = self.active_category.data
@@ -320,6 +376,9 @@ class NotesApp(ft.Column):
         self.page.update()
 
     def add_clicked(self, e):
+        """
+        Add a new note to the selected category.
+        """
         # Get category from text field (prioritizing this for custom entry)
         category = self.category_input.value.strip()
         
@@ -361,6 +420,9 @@ class NotesApp(ft.Column):
                 self.page.update()
 
     def note_delete(self, note):
+        """
+        Delete a note from the UI and Firebase.
+        """
         FirebaseDB.delete_note(self.userID, note.note_id, note.category)
         for category in self.categories.controls:
             if isinstance(category, ft.Container):
