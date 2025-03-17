@@ -3,7 +3,7 @@ import flet as ft
 def main(page: ft.Page):
     page.title = "Notes App"
     
-    def add_note(e):
+    def add_note(e): # create new notes in the app
         if note_input.value.strip():
             notes_view.controls.append(
                 ft.ListTile(
