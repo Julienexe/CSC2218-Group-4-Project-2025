@@ -30,7 +30,7 @@ def main(page: ft.Page):
         message.value = result["message"]
         page.update()
 
-    def handle_login(e):
+    def handle_login(e): # Login users 
         result = AuthManager.login_user(email_field.value, password_field.value)
         if result["success"]:
             message.value = "Login Successful!"
