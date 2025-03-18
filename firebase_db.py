@@ -20,7 +20,7 @@ class FirebaseDB:
     
 
     @staticmethod
-    def get_notes(user_id: str):
+    def get_notes(user_id: str) -> list:
         """Fetches all notes for a given user from Firestore"""
         try:
             notes_ref = db.collection("notes").where("user_id", "==", user_id).stream()
