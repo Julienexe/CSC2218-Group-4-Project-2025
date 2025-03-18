@@ -14,3 +14,13 @@ class Logger:
     def get_logger(self):
         return self.logger
 
+
+# Logger as a Singleton
+class LoggerSingleton:
+    _instance = None
+    
+    @classmethod
+    def get_instance(cls, name="FirebaseDB"):
+        if cls._instance is None:
+            cls._instance = Logger(name).get_logger()
+        return cls._instance
