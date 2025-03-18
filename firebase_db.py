@@ -17,15 +17,50 @@ logger = logging.getLogger(__name__)
 class FirebaseDB:
     """Handles all Firestore interactions for the Notes app"""
     logger = logger
+
+    #method to read a document from firestore and return it
+    @staticmethod
+
+    def read_document(collection_name: str, document_id: str)-> dict:
+        """Reads a document from Firestore"""
+        try:
+            doc_ref = db.collection(collection_name).document(document_id)
+            doc = doc_ref.get()
+            if doc.exists:
+                return doc.to_dict()
+            else:
+                return None
+        except Exception as e:
+            FirebaseDB.logger.error(f"Error reading document: {e}")
+            return None
+    
+    #read all documents in a collection and apply a filter if needed
+    @staticmethod
+    def read_collection(collection_name: str, filter_field: str = None, filter_value: str = None):
+        """Reads all documents from a Firestore collection"""
+
+
+        try:
+            collection_ref = db.collection(collection_name)
+            if filter_field and filter_value:
+                query = collection_ref.where(filter_field, "==", filter_value)
+            else:
+                query = collection_ref
+            docs = query.stream()
+            return [doc.to_dict() for doc in docs]
+        except Exception as e:
+            FirebaseDB.logger.error(f"Error reading collection: {e}")
+            return []
     
 
     @staticmethod
     def get_notes(user_id: str) -> list:
         """Fetches all notes for a given user from Firestore"""
         try:
-            notes_ref = db.collection("notes").where("user_id", "==", user_id).stream()
-            # Return a list of notes with id and text
-            return [{"id": note.id, "text": note.to_dict()["text"]} for note in notes_ref]
+            notes_list = FirebaseDB.read_collection("notes", "user_id", user_id)
+            #return a list of notes with an id and text
+            return [{"id": note["id"], "text": note["text"]} for note in notes_list]
+
         except Exception as e:
             FirebaseDB.logger.error(f"Error getting notes: {e}")
             return []
@@ -228,16 +263,8 @@ class FirebaseDB:
         categories_dict = {}
         
         try:
-            # Get the user document
-            user_doc_ref = db.collection("users").document(user_id)
-            user_doc = user_doc_ref.get()
-            
-            if not user_doc.exists:
-                FirebaseDB.logger.error(f"User document for {user_id} does not exist")
-                return categories_dict
-            
-            # Get all fields in the user document
-            user_data = user_doc.to_dict()
+            # Get the user data
+            user_data = FirebaseDB.read_document("users", user_id) or {}
             
             # Iterate through each field in the user document
             for field_name, field_value in user_data.items():
