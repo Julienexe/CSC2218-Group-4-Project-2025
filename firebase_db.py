@@ -58,6 +58,57 @@ class FirebaseDB:
             FirebaseDB.logger.error(f"Error reading collection: {e}")
             return []
     
+    #READ OPERATIONS
+    @staticmethod
+    def get_categories(user_id) -> dict:
+        """
+        Fetch all categories with their notes from Firestore
+        Returns a dictionary where:
+        - Keys are category names
+        - Values are lists of note objects with 'id', 'text', and 'font_family' fields
+        """
+        # Create a dictionary to store categories and their notes
+        categories_dict = {}
+        
+        try:
+            # Get the user data
+            user_data = FirebaseDB.read_document("users", user_id) or {}
+            
+            # Iterate through each field in the user document
+            for field_name, field_value in user_data.items():
+                # Check if the field value is an array (potential category)
+                if isinstance(field_value, list):
+                    # This field is likely a category with an array of note references
+                    notes_list = FirebaseDB.load_category_notes(field_name, field_value)
+                    # Only add the category if it has notes
+                    if notes_list:
+                        categories_dict[field_name] = notes_list
+        
+        except Exception as e:
+            FirebaseDB.logger.error(f"Error fetching categories for user {user_id}: {e}")
+        return categories_dict
+    
+    @staticmethod
+    def load_category_notes(field_name, field_value )-> list:
+        """ Load notes from a category field in a user document """
+        notes_list=[]
+        for note_ref in field_value:
+            try:
+                            # Get the note dictionary
+                note_dict = FirebaseDB.get_dict_from_ref(note_ref)
+                            
+                if note_dict:
+                                # Add the note ID, text, and font_family to our list
+                    notes_list.append({
+                                    "id": note_ref.id,
+                                    "text": note_dict.get("text", ""),
+                                    "font_family": note_dict.get("font_family", "Arial")  # Include the font family
+                                })
+                else:    
+                    FirebaseDB.logger.error(f"Note {note_ref.id} referenced in {field_name} doesn't exist")
+            except Exception as e:
+                FirebaseDB.logger.error(f"Error fetching note {note_ref.id}: {e}")
+        return notes_list
 
     @staticmethod
     def get_notes(user_id: str) -> list:
@@ -71,6 +122,7 @@ class FirebaseDB:
             FirebaseDB.logger.error(f"Error getting notes: {e}")
             return []
     
+    #CREATE OPERATIONS
     @staticmethod
     def add_user(user_id:str, email:str):
         """Adds a new user to Firestore
@@ -156,7 +208,8 @@ class FirebaseDB:
         except Exception as e:
             FirebaseDB.logger.error(f"Error adding note: {e}")
             return None
-        
+
+    #UPDATE OPERATIONS    
     @staticmethod
     def edit_note(note_id: str, note_text: str, user_id: str, category: str, font_family: str = "Arial"):
         """
@@ -202,7 +255,8 @@ class FirebaseDB:
         except Exception as e:
             FirebaseDB.logger.error(f"Error editing note: {e}")
             return False
-        
+
+    #DELETE OPERATIONS    
     @staticmethod
     def delete_note(user_id: str, note_id: str, category: str):
         """
@@ -257,55 +311,8 @@ class FirebaseDB:
         except Exception as e:
             FirebaseDB.logger.error(f"Error deleting note: {e}")
                 
-    @staticmethod
-    def get_categories(user_id) -> dict:
-        """
-        Fetch all categories with their notes from Firestore
-        Returns a dictionary where:
-        - Keys are category names
-        - Values are lists of note objects with 'id', 'text', and 'font_family' fields
-        """
-        # Create a dictionary to store categories and their notes
-        categories_dict = {}
-        
-        try:
-            # Get the user data
-            user_data = FirebaseDB.read_document("users", user_id) or {}
-            
-            # Iterate through each field in the user document
-            for field_name, field_value in user_data.items():
-                # Check if the field value is an array (potential category)
-                if isinstance(field_value, list):
-                    # This field is likely a category with an array of note references
-                    notes_list = FirebaseDB.load_category_notes(field_name, field_value)
-                    # Only add the category if it has notes
-                    if notes_list:
-                        categories_dict[field_name] = notes_list
-        
-        except Exception as e:
-            FirebaseDB.logger.error(f"Error fetching categories for user {user_id}: {e}")
-        return categories_dict
 
-    @staticmethod
-    def load_category_notes(field_name, field_value )-> list:
-        """ Load notes from a category field in a user document """
-        notes_list=[]
-        for note_ref in field_value:
-            try:
-                            # Get the note dictionary
-                note_dict = FirebaseDB.get_dict_from_ref(note_ref)
-                            
-                if note_dict:
-                                # Add the note ID, text, and font_family to our list
-                    notes_list.append({
-                                    "id": note_ref.id,
-                                    "text": note_dict.get("text", ""),
-                                    "font_family": note_dict.get("font_family", "Arial")  # Include the font family
-                                })
-                else:    
-                    FirebaseDB.logger.error(f"Note {note_ref.id} referenced in {field_name} doesn't exist")
-            except Exception as e:
-                FirebaseDB.logger.error(f"Error fetching note {note_ref.id}: {e}")
-        return notes_list
+
+
                             
                             
