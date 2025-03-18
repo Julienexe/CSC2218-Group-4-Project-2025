@@ -1,9 +1,5 @@
-from firebase_admin import credentials, firestore
 from db.repositories import UserRepository, NoteRepository, db
-from modules.decorators import handle_firestore_errors
-from modules.loggers import Logger
-from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, TypeVar, Generic, Callable
+from typing import Dict, List, Any, Optional
 
 
 
