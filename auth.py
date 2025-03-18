@@ -3,6 +3,11 @@ import firebase_admin
 from firebase_admin import auth, credentials
 import requests
 from firebase_db import FirebaseDB
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+#read secrets from environment variables
 
 
 
@@ -26,7 +31,7 @@ class AuthManager:
     @staticmethod
     def login_user(email: str, password: str):
         """Logs in user and generates a Firebase token"""
-        firebase_url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDd1qWlXMFU0kU0-98cIbiV34iIEbT44so"
+        firebase_url = os.getenv("FIREBASE_URL")
         payload = {
             "email": email,
             "password": password,

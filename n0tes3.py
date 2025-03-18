@@ -1,6 +1,8 @@
 import flet as ft
 from firebase_db import FirebaseDB
 
+db = FirebaseDB()
+
 class Note(ft.Container):
     """
     A custom Container widget representing a single note.
@@ -19,6 +21,7 @@ class Note(ft.Container):
             font_family (str, optional): The font family for the note text. Defaults to "Arial".
         """
         super().__init__()
+        self.db = db
         self.note_id = note_id
         self.note_text = note_text
         self.category = category
@@ -73,7 +76,7 @@ class Note(ft.Container):
         new_text = self.content.controls[0].value
         self.note_text = new_text
         # Include the font family when editing the note
-        FirebaseDB.edit_note(
+        self.db.edit_note(
             note_id=self.note_id, 
             note_text=self.note_text, 
             user_id=self.user_id, 
@@ -132,6 +135,7 @@ class NotesApp(ft.Column):
         super().__init__()
         self.userID = userId
         self.page = page
+        self.db = db
         
         # Create input fields with consistent styling
         self.new_note = ft.TextField(
@@ -319,7 +323,7 @@ class NotesApp(ft.Column):
         Load notes from Firebase and display them in the UI.
         """
         self.categories.controls.clear()
-        categories_data = FirebaseDB.get_categories(self.userID)
+        categories_data = self.db.get_categories(self.userID)
         for category_name, notes_list in categories_data.items():
             notes_controls = [
                 Note(
@@ -391,7 +395,7 @@ class NotesApp(ft.Column):
             # Use the selected font from the dropdown
             selected_font = self.font_dropdown.value
             # Include the font family when adding the note
-            note_id = FirebaseDB.add_note(self.userID, category, note_text, font_family=selected_font)
+            note_id = self.db.add_note(self.userID, category, note_text, font_family=selected_font)
             if note_id:
                 new_note = Note(note_id, note_text, self.note_delete, category, self.userID, font_family=selected_font)
                 category_container = next((c for c in self.categories.controls if isinstance(c, ft.Container) and c.content.controls[0].value == category), None)
@@ -423,7 +427,7 @@ class NotesApp(ft.Column):
         """
         Delete a note from the UI and Firebase.
         """
-        FirebaseDB.delete_note(self.userID, note.note_id, note.category)
+        self.db.delete_note(self.userID, note.note_id, note.category)
         for category in self.categories.controls:
             if isinstance(category, ft.Container):
                 # Check if note is in this category's content

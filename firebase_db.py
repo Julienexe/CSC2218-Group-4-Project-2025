@@ -1,270 +1,68 @@
-import firebase_admin
-from firebase_admin import credentials, firestore
+from db.repositories import UserRepository, NoteRepository, db
+from typing import Dict, List, Any, Optional
 
-# Initialize Firebase
-cred = credentials.Certificate(r"C:/Users/ARNOLD/Desktop/SC/CSC2218-Group-4-Project-2025/serviceAccountKey.json")
-# Initialize Firebase Admin SDK
-# firebase_admin.initialize_app(cred)
 
-# Firestore client
-db = firestore.client()
 
+# Facade Pattern - provides a simplified interface to the complex subsystem
 class FirebaseDB:
-    """Handles all Firestore interactions for the Notes app"""
-
-    @staticmethod
-    def get_notes(user_id: str):
-        """Fetches all notes for a given user from Firestore"""
-        try:
-            notes_ref = db.collection("notes").where("user_id", "==", user_id).stream()
-            # Return a list of notes with id and text
-            return [{"id": note.id, "text": note.to_dict()["text"]} for note in notes_ref]
-        except Exception as e:
-            print(f"Error getting notes: {e}")
-            return []
+    """Facade for all Firestore interactions for the Notes app"""
     
-    @staticmethod
-    def add_user(user_id:str, email:str):
-        """Adds a new user to Firestore
-        ARGS:
-        user_id (str): The unique ID of the user
-        email (str): The email of the user
-        """
-        try:
-            # Add user to users collection, create it if it does not exist
-            users_ref = db.collection("users")
-            users_ref.document(user_id).set({"email": email})
-        except Exception as e:
-            print(f"Error adding user: {e}")
-            
-    @staticmethod
-    def add_note(user_id, category, note_text, font_family="Arial"):
-        """
-        Adds a note to the general notes collection and updates the user's document 
-        with a reference to the note under the specified category
-        """
-        try:
-            # First add the note to the general collection
-            note_ref = FirebaseDB.add_note_to_general_collection(user_id, note_text, font_family)
-            
-            if not note_ref:
-                print("Failed to create note in general collection")
-                return None
-                
-            # Now update the user's document to include this note reference in the specified category
-            user_doc_ref = db.collection("users").document(user_id)
-            
-            # Get the current user document
-            user_doc = user_doc_ref.get()
-            
-            if user_doc.exists:
-                # User document exists, update it
-                user_data = user_doc.to_dict() or {}
-                
-                # Check if this category already exists in the user document
-                if category in user_data:
-                    # Category exists, append the new note reference
-                    category_refs = user_data[category]
-                    category_refs.append(note_ref)
-                else:
-                    # Category doesn't exist, create it with the new note reference
-                    category_refs = [note_ref]
-                
-                # Update the user document with the new category data
-                user_doc_ref.update({
-                    category: category_refs
-                })
-            else:
-                # User document doesn't exist, create it
-                user_doc_ref.set({
-                    category: [note_ref]
-                })
-            
-            return note_ref.id  # Return the ID of the new note
-            
-        except Exception as e:
-            print(f"Error adding note: {e}")
+    def __init__(self):
+        self.user_repo = UserRepository()
+        self.note_repo = NoteRepository()
+    
+    # User operations
+    def add_user(self, user_id: str, email: str) -> bool:
+        """Adds a new user"""
+        return self.user_repo.create_user(user_id, email)
+    
+    def get_categories(self, user_id: str) -> Dict[str, List[Dict[str, Any]]]:
+        """Gets all categories with notes for a user"""
+        return self.user_repo.get_categories(user_id)
+    
+    # Note operations
+    def get_notes(self, user_id: str) -> List[Dict[str, Any]]:
+        """Gets all notes for a user"""
+        return self.note_repo.get_user_notes(user_id)
+    
+    def add_note(self, user_id: str, category: str, note_text: str, font_family: str = "Arial") -> Optional[str]:
+        """Adds a note to a category"""
+        # First add the note to the general collection
+        note_ref = self.note_repo.create_note(user_id, note_text, font_family)
+        
+        if not note_ref:
             return None
         
-    @staticmethod
-    def add_note_to_general_collection(user_id: str, note_text: str, font_family: str = "Arial"):
-        """
-        Adds a new note to Firestore
-        Returns the document reference for the newly created note
-        """
-        try:
-            # Add note to Firestore under the 'notes' collection
-            notes_ref = db.collection("notes")
-            _, new_note_ref = notes_ref.add({
-                "text": note_text,
-                "user_id": user_id,
-                "font_family": font_family,  # Include the font family
-                "timestamp": firestore.SERVER_TIMESTAMP  # Adding a timestamp for sorting if needed
-            })
-            
-            # Return the document reference rather than just the ID
-            return new_note_ref
-            
-        except Exception as e:
-            print(f"Error adding note: {e}")
+        # Add the note reference to the user's category
+        success = self.user_repo.add_note_to_category(user_id, category, note_ref)
+        
+        if not success:
+            # Rollback - delete the note if we couldn't add it to the category
+            self.note_repo.delete_note(note_ref.id)
             return None
         
-    @staticmethod
-    def edit_note(note_id: str, note_text: str, user_id: str, category: str, font_family: str = "Arial"):
-        """
-        Edits a note in the general notes collection
+        return note_ref.id
+    
+    def edit_note(self, note_id: str, note_text: str, user_id: str, category: str, font_family: str = "Arial") -> bool:
+        """Edits a note"""
+        note_data = self.note_repo.get_note(note_id)
         
-        Parameters:
-        - note_id: The ID of the note to edit
-        - note_text: The new text for the note
-        - user_id: The ID of the user who owns the note (for validation)
-        - category: The category the note belongs to (not used in this implementation but kept for compatibility)
-        - font_family: The font family to use for the note
-        
-        Returns:
-        - True if the edit was successful, False otherwise
-        """
-        try:
-            # Reference to the note in the general notes collection
-            note_ref = db.collection("notes").document(note_id)
-            
-            # Get the note to verify it belongs to the user
-            note_doc = note_ref.get()
-            
-            if not note_doc.exists:
-                print(f"Note {note_id} does not exist")
-                return False
-                
-            note_data = note_doc.to_dict()
-            
-            # Verify the note belongs to the user
-            if note_data.get("user_id") != user_id:
-                print(f"Note {note_id} does not belong to user {user_id}")
-                return False
-            
-            # Update the note text and font family
-            note_ref.update({
-                "text": note_text,
-                "font_family": font_family,  # Update the font family
-                "timestamp": firestore.SERVER_TIMESTAMP  # Update timestamp for sorting
-            })
-            
-            return True
-            
-        except Exception as e:
-            print(f"Error editing note: {e}")
+        # Verify the note belongs to the user
+        if not note_data or note_data.get("user_id") != user_id:
             return False
         
-    @staticmethod
-    def delete_note(user_id: str, note_id: str, category: str):
-        """
-        Deletes a note by:
-        1. Removing the reference from the user's document category array
-        2. Deleting the actual note from the general notes collection
+        return self.note_repo.update_note(note_id, note_text, font_family)
+    
+    def delete_note(self, user_id: str, note_id: str, category: str) -> bool:
+        """Deletes a note and removes it from the category"""
+        # Get note reference
+        note_ref = db.collection("notes").document(note_id)
         
-        Parameters:
-        - user_id: The ID of the user who owns the note
-        - note_id: The ID of the note to delete
-        - category: The category the note belongs to
-        """
-        try:
-            # Step 1: Get the user document
-            user_doc_ref = db.collection("users").document(user_id)
-            user_doc = user_doc_ref.get()
-            
-            if not user_doc.exists:
-                print(f"User document for {user_id} does not exist")
-                return
-            
-            # Step 2: Get the note reference to remove
-            note_ref = db.collection("notes").document(note_id)
-            
-            # Step 3: Remove the note reference from the category array in the user document
-            user_data = user_doc.to_dict()
-            
-            if category in user_data and isinstance(user_data[category], list):
-                # Remove the reference from the array
-                # Using arrayRemove is the best way to remove items from a Firestore array
-                user_doc_ref.update({
-                    category: firestore.ArrayRemove([note_ref])
-                })
-                
-                # If the category is now empty, you might want to remove it completely
-                # This requires a separate get and update operation
-                updated_user = user_doc_ref.get().to_dict()
-                if category in updated_user and len(updated_user[category]) == 0:
-                    # Remove the empty category field
-                    user_doc_ref.update({
-                        category: firestore.DELETE_FIELD
-                    })
-                    
-            else:
-                print(f"Category {category} not found in user document or is not an array")
-            
-            # Step 4: Delete the actual note from the general collection
-            note_ref.delete()
-            
-            print(f"Successfully deleted note {note_id} from category {category}")
-            
-        except Exception as e:
-            print(f"Error deleting note: {e}")
-                
-    @staticmethod
-    def get_categories(user_id):
-        """
-        Fetch all categories with their notes from Firestore
-        Returns a dictionary where:
-        - Keys are category names
-        - Values are lists of note objects with 'id', 'text', and 'font_family' fields
-        """
-        # Create a dictionary to store categories and their notes
-        categories_dict = {}
+        # Remove from category
+        removed = self.user_repo.remove_note_from_category(user_id, category, note_ref)
         
-        try:
-            # Get the user document
-            user_doc_ref = db.collection("users").document(user_id)
-            user_doc = user_doc_ref.get()
-            
-            if not user_doc.exists:
-                print(f"User document for {user_id} does not exist")
-                return categories_dict
-            
-            # Get all fields in the user document
-            user_data = user_doc.to_dict()
-            
-            # Iterate through each field in the user document
-            for field_name, field_value in user_data.items():
-                # Check if the field value is an array (potential category)
-                if isinstance(field_value, list):
-                    # This field is likely a category with an array of note references
-                    notes_list = []
-                    
-                    # Get each note referenced in this category
-                    for note_ref in field_value:
-                        try:
-                            # Get the note document
-                            note_doc = note_ref.get()
-                            
-                            if note_doc.exists:
-                                # Get the note data
-                                note_data = note_doc.to_dict()
-                                
-                                # Add the note ID, text, and font_family to our list
-                                notes_list.append({
-                                    "id": note_doc.id,
-                                    "text": note_data.get("text", ""),
-                                    "font_family": note_data.get("font_family", "Arial")  # Include the font family
-                                })
-                            else:
-                                print(f"Note {note_ref.id} referenced in {field_name} doesn't exist")
-                        except Exception as e:
-                            print(f"Error fetching note {note_ref.id}: {e}")
-                    
-                    # Only add the category if it has notes
-                    if notes_list:
-                        categories_dict[field_name] = notes_list
+        if not removed:
+            return False
         
-        except Exception as e:
-            print(f"Error fetching categories for user {user_id}: {e}")
-        
-        return categories_dict
+        # Delete the actual note
+        return self.note_repo.delete_note(note_id)

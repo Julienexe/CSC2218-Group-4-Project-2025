@@ -1,55 +1,251 @@
 import flet as ft
 import firebase_admin
 from firebase_admin import auth, credentials
-# Initialize Firebase
-cred = credentials.Certificate(r"C:/Users/ARNOLD/Desktop/SC/CSC2218-Group-4-Project-2025/serviceAccountKey.json")
-firebase_admin.initialize_app(cred)
+import os
+from modules.loggers import Logger
 
-from auth import AuthManager
-from n0tes3 import NotesApp
-# This function will navigate the user to the NotesApp after login
-def navigate_to_notes(page: ft.Page, user_id: str):
-    """Navigates to the NotesApp screen after login"""
-    page.views.clear()
-    page.views.append(NotesApp(page=page,userId=user_id))
-    page.update()
-    # page.session["user_uid"] = user_id  # Store the user_id in the session
-    # app = NotesApp(page)  # Create the NotesApp instance
-    # page.add(app)  # Add the NotesApp to the page
-    # page.update()  # Refresh the page to show the NotesApp screen
-
-def main(page: ft.Page):
-    page.title = "EvoNote"
+# Singleton Pattern for Firebase initialization
+class FirebaseClient:
+    _instance = None
     
-    email_field = ft.TextField(label="Email", width=300)
-    password_field = ft.TextField(label="Password", password=True, width=300)
-    message = ft.Text("")
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(FirebaseClient, cls).__new__(cls)
+            cred = credentials.Certificate(r"serviceAccountKey.json")
+            cls._instance.app = firebase_admin.initialize_app(cred)
+            cls._instance.logger = Logger(__name__).get_logger()
+        return cls._instance
 
-    def handle_register(e):
-        result = AuthManager.register_user(email_field.value, password_field.value)
-        message.value = result["message"]
-        page.update()
-
-    def handle_login(e): # Login users 
-        result = AuthManager.login_user(email_field.value, password_field.value)
-        if result["success"]:
-            message.value = "Login Successful!"
-            user_id = result["user_id"]
-            print(f"User ID: {user_id}")
-            navigate_to_notes(page, user_id)  # Navigate to NotesApp after login
+# Factory Pattern for Session Management
+class SessionFactory:
+    @staticmethod
+    def create_session(strategy_type="file"):
+        if strategy_type == "file":
+            return FileSessionStrategy()
+        elif strategy_type == "memory":
+            return MemorySessionStrategy()
         else:
-            message.value = result["message"]  # Show error message if login fails
-        page.update()
+            raise ValueError(f"Unknown session strategy: {strategy_type}")
 
-    page.add(
-        email_field,
-        password_field,
-        ft.Row([
-            ft.ElevatedButton("Register", on_click=handle_register),
-            ft.ElevatedButton("Login", on_click=handle_login),
-        ]),
-        message
-    )
+# Strategy Pattern for Session Management
+class SessionStrategy:
+    def save_session(self, user_id):
+        pass
+    
+    def get_session(self):
+        pass
+    
+    def clear_session(self):
+        pass
+
+class FileSessionStrategy(SessionStrategy):
+    def __init__(self):
+        self.session_file = os.path.join(os.path.expanduser("~"), ".evonote_session")
+        self.logger = Logger(__name__).get_logger()
+    
+    def save_session(self, user_id):
+        try:
+            with open(self.session_file, "w") as f:
+                f.write(user_id)
+            return True
+        except Exception as e:
+            self.logger.error(f"Error saving session: {e}")
+            return False
+    
+    def get_session(self):
+        try:
+            if os.path.exists(self.session_file):
+                with open(self.session_file, "r") as f:
+                    user_id = f.read().strip()
+                
+                # Verify the user ID is still valid in Firebase
+                try:
+                    auth.get_user(user_id)
+                    return {"success": True, "user_id": user_id}
+                except:
+                    # User not found or token expired
+                    self.clear_session()  # Remove invalid session
+            return {"success": False}
+        except Exception as e:
+            self.logger.error(f"Error checking session: {e}")
+            return {"success": False}
+    
+    def clear_session(self):
+        try:
+            if os.path.exists(self.session_file):
+                os.remove(self.session_file)
+            return True
+        except Exception as e:
+            self.logger.error(f"Error clearing session: {e}")
+            return False
 
 
-ft.app(target=main)
+class MemorySessionStrategy(SessionStrategy):
+    _session_data = None
+    
+    def save_session(self, user_id):
+        MemorySessionStrategy._session_data = user_id
+        return True
+    
+    def get_session(self):
+        if MemorySessionStrategy._session_data:
+            try:
+                user_id = MemorySessionStrategy._session_data
+                auth.get_user(user_id)
+                return {"success": True, "user_id": user_id}
+            except:
+                self.clear_session()
+        return {"success": False}
+    
+    def clear_session(self):
+        MemorySessionStrategy._session_data = None
+        return True
+
+# Observer Pattern for authentication events
+class AuthEventSubject:
+    _observers = []
+    
+    def attach(self, observer):
+        self._observers.append(observer)
+    
+    def detach(self, observer):
+        self._observers.remove(observer)
+    
+    def notify(self, event_type, data=None):
+        for observer in self._observers:
+            observer.update(event_type, data)
+
+# Command Pattern for Authentication Actions
+class AuthCommand:
+    def execute(self):
+        pass
+
+class LoginCommand(AuthCommand):
+    def __init__(self, auth_manager, email, password):
+        self.auth_manager = auth_manager
+        self.email = email
+        self.password = password
+    
+    def execute(self):
+        return self.auth_manager.login_user(self.email, self.password)
+
+class RegisterCommand(AuthCommand):
+    def __init__(self, auth_manager, email, password):
+        self.auth_manager = auth_manager
+        self.email = email
+        self.password = password
+    
+    def execute(self):
+        return self.auth_manager.register_user(self.email, self.password)
+
+# Facade Pattern for Authentication
+class AuthFacade:
+    def __init__(self):
+        from auth import AuthManager
+        self.auth_manager = AuthManager
+        self.auth_event_subject = AuthEventSubject()
+        self.session_strategy = SessionFactory.create_session("file")
+        self.logger = Logger(__name__).get_logger()
+    
+    def login(self, email, password):
+        command = LoginCommand(self.auth_manager, email, password)
+        result = command.execute()
+        
+
+    
+    def register(self, email, password):
+        command = RegisterCommand(self.auth_manager, email, password)
+        result = command.execute()
+        
+        if result.get("success", False):
+            self.auth_event_subject.notify("register_success", result.get("user_id"))
+        else:
+            self.auth_event_subject.notify("register_failure", result["message"])
+        
+        return result
+    
+    def check_session(self):
+        return self.session_strategy.get_session()
+    
+    def logout(self):
+        self.session_strategy.clear_session()
+        self.auth_event_subject.notify("logout")
+        return {"success": True, "message": "Logged out successfully"}
+
+# MVC Pattern - Controller
+class AppController:
+    def __init__(self):
+        self.firebase_client = FirebaseClient()
+        self.auth_facade = AuthFacade()
+        self.logger = Logger(__name__).get_logger()
+    
+    def initialize_app(self, page):
+        self.page = page
+        session = self.auth_facade.check_session()
+        
+        if session["success"]:
+            user_id = session["user_id"]
+            self.logger.info(f"Auto-login for user ID: {user_id}")
+            self.navigate_to_notes(user_id)
+        else:
+            self.show_login_view()
+    
+    def navigate_to_notes(self, user_id):
+        from n0tes3 import NotesApp
+        self.page.views.clear()
+        self.page.views.append(NotesApp(page=self.page, userId=user_id))
+        self.page.update()
+    
+    def show_login_view(self):
+        login_view = LoginView(self.page, self)
+        login_view.build()
+    
+    def handle_login(self, email, password):
+        result = self.auth_facade.login(email, password)
+        if result["success"]:
+            self.navigate_to_notes(result["user_id"])
+        return result
+    
+    def handle_register(self, email, password):
+        return self.auth_facade.register(email, password)
+
+# MVC Pattern - View
+class LoginView:
+    def __init__(self, page, controller):
+        self.page = page
+        self.controller = controller
+        self.page.title = "EvoNote"
+    
+    def build(self):
+        self.email_field = ft.TextField(label="Email", width=300)
+        self.password_field = ft.TextField(label="Password", password=True, width=300)
+        self.message = ft.Text("")
+        
+        def on_login(e):
+            result = self.controller.handle_login(self.email_field.value, self.password_field.value)
+            if not result["success"]:
+                self.message.value = result["message"]
+                self.page.update()
+        
+        def on_register(e):
+            result = self.controller.handle_register(self.email_field.value, self.password_field.value)
+            self.message.value = result["message"]
+            self.page.update()
+        
+        self.page.add(
+            self.email_field,
+            self.password_field,
+            ft.Row([
+                ft.ElevatedButton("Register", on_click=on_register),
+                ft.ElevatedButton("Login", on_click=on_login),
+            ]),
+            self.message
+        )
+
+# Application entry point
+def main(page: ft.Page):
+    controller = AppController()
+    controller.initialize_app(page)
+
+if __name__ == "__main__":
+    ft.app(target=main)
