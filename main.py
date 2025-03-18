@@ -1,17 +1,24 @@
 import flet as ft
 import firebase_admin
 from firebase_admin import auth, credentials
+from modules.loggers import Logger
+
 # Initialize Firebase
 cred = credentials.Certificate(r"serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 
 from auth import AuthManager
 from n0tes3 import NotesApp
+
+
+#Set up logging
+logger = Logger(__name__).get_logger()
+
 # This function will navigate the user to the NotesApp after login
 def navigate_to_notes(page: ft.Page, user_id: str):
     """Navigates to the NotesApp screen after login"""
     page.views.clear()
-    page.views.append(NotesApp(page=page,userId=user_id))
+    page.views.append(NotesApp(page=page, userId=user_id))
     page.update()
     # page.session["user_uid"] = user_id  # Store the user_id in the session
     # app = NotesApp(page)  # Create the NotesApp instance
@@ -35,7 +42,7 @@ def main(page: ft.Page):
         if result["success"]:
             message.value = "Login Successful!"
             user_id = result["user_id"]
-            print(f"User ID: {user_id}")
+            logger.info(f"User ID: {user_id}")
             navigate_to_notes(page, user_id)  # Navigate to NotesApp after login
         else:
             message.value = result["message"]  # Show error message if login fails
@@ -50,6 +57,5 @@ def main(page: ft.Page):
         ]),
         message
     )
-
 
 ft.app(target=main)
