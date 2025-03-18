@@ -9,8 +9,18 @@ cred = credentials.Certificate(r"serviceAccountKey.json")
 # Firestore client
 db = firestore.client()
 
+class Logger:
+    """Simple class to log messages to the console"""
+    
+    @staticmethod
+    def log(message):
+        """Logs a message to the console"""
+        print(message)
+
 class FirebaseDB:
     """Handles all Firestore interactions for the Notes app"""
+    logger = Logger()
+    
 
     @staticmethod
     def get_notes(user_id: str):
