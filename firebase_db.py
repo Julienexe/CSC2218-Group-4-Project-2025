@@ -20,7 +20,7 @@ class FirebaseDB:
 
     #method to return a dictionary from a firebase reference
     @staticmethod
-    def get_dict_from_ref(ref):
+    def get_dict_from_ref(ref)-> dict:
         """Returns a dictionary from a Firestore reference"""
         return ref.get().to_dict() if ref else None
     
@@ -58,6 +58,28 @@ class FirebaseDB:
             FirebaseDB.logger.error(f"Error reading collection: {e}")
             return []
     
+    #method to set a document given a collection name and document id and data dictionary
+    @staticmethod
+    def set_document(collection_name: str, document_id: str, data: dict):
+        """Sets a document in Firestore"""
+        try:
+            doc_ref = db.collection(collection_name).document(document_id)
+            doc_ref.set(data)
+        except Exception as e:
+            FirebaseDB.logger.error(f"Error setting document: {e}")
+    
+    #method to update a document given a collection name, document id and data dictionary
+    @staticmethod
+    def update_document(collection_name: str, document_id: str, data: dict):
+        """Updates a document in Firestore"""
+
+        try:
+            doc_ref = db.collection(collection_name).document(document_id)
+            doc_ref.update(data)
+        except Exception as e:
+            FirebaseDB.logger.error(f"Error updating document: {e}")
+
+
     #READ OPERATIONS
     @staticmethod
     def get_categories(user_id) -> dict:
@@ -132,8 +154,8 @@ class FirebaseDB:
         """
         try:
             # Add user to users collection, create it if it does not exist
-            users_ref = db.collection("users")
-            users_ref.document(user_id).set({"email": email})
+            FirebaseDB.set_document("users", user_id, {"email": email})
+            FirebaseDB.logger.info(f"Successfully added user {user_id}")
         except Exception as e:
             FirebaseDB.logger.error(f"Error adding user: {e}")
             
@@ -151,35 +173,21 @@ class FirebaseDB:
                 FirebaseDB.logger.error("Failed to create note in general collection")
                 return None
                 
-            # Now update the user's document to include this note reference in the specified category
-            user_doc_ref = db.collection("users").document(user_id)
+            user_data = FirebaseDB.get_dict_from_ref(user_doc_ref = db.collection("users").document(user_id)) or {}
             
-            # Get the current user document
-            user_doc = user_doc_ref.get()
-            
-            if user_doc.exists:
-                # User document exists, update it
-                user_data = user_doc.to_dict() or {}
-                
-                # Check if this category already exists in the user document
-                if category in user_data:
-                    # Category exists, append the new note reference
-                    category_refs = user_data[category]
-                    category_refs.append(note_ref)
-                else:
-                    # Category doesn't exist, create it with the new note reference
-                    category_refs = [note_ref]
-                
-                # Update the user document with the new category data
-                user_doc_ref.update({
-                    category: category_refs
-                })
+            # Check if this category already exists in the user document
+            if category in user_data:
+                # Category exists, append the new note reference
+                category_refs = user_data[category]
+                category_refs.append(note_ref)
             else:
-                # User document doesn't exist, create it
-                user_doc_ref.set({
-                    category: [note_ref]
-                })
+                # Category doesn't exist, create it with the new note reference
+                category_refs = [note_ref]
             
+            # Update the user document with the new category data
+            FirebaseDB.update_document("users", user_id, {category: category_refs})
+            
+           
             return note_ref.id  # Return the ID of the new note
             
         except Exception as e:
@@ -195,12 +203,7 @@ class FirebaseDB:
         try:
             # Add note to Firestore under the 'notes' collection
             notes_ref = db.collection("notes")
-            _, new_note_ref = notes_ref.add({
-                "text": note_text,
-                "user_id": user_id,
-                "font_family": font_family,  # Include the font family
-                "timestamp": firestore.SERVER_TIMESTAMP  # Adding a timestamp for sorting if needed
-            })
+            _, new_note_ref = FirebaseDB.create_note_document(user_id, note_text, font_family, notes_ref)
             
             # Return the document reference rather than just the ID
             return new_note_ref
@@ -209,13 +212,22 @@ class FirebaseDB:
             FirebaseDB.logger.error(f"Error adding note: {e}")
             return None
 
+    @staticmethod
+    def create_note_document(user_id, note_text, font_family, notes_ref):
+        return notes_ref.add({
+                "text": note_text,
+                "user_id": user_id,
+                "font_family": font_family,  # Include the font family
+                "timestamp": firestore.SERVER_TIMESTAMP  # Adding a timestamp for sorting if needed
+            })
+
     #UPDATE OPERATIONS    
     @staticmethod
     def edit_note(note_id: str, note_text: str, user_id: str, category: str, font_family: str = "Arial"):
         """
         Edits a note in the general notes collection
         
-        Parameters:
+        Args:
         - note_id: The ID of the note to edit
         - note_text: The new text for the note
         - user_id: The ID of the user who owns the note (for validation)
@@ -226,25 +238,15 @@ class FirebaseDB:
         - True if the edit was successful, False otherwise
         """
         try:
-            # Reference to the note in the general notes collection
-            note_ref = db.collection("notes").document(note_id)
-            
-            # Get the note to verify it belongs to the user
-            note_doc = note_ref.get()
-            
-            if not note_doc.exists:
-                FirebaseDB.logger.error(f"Note {note_id} does not exist")
-                return False
-                
-            note_data = note_doc.to_dict()
+            note_data = FirebaseDB.get_dict_from_ref(db.collection("notes").document(note_id))
             
             # Verify the note belongs to the user
-            if note_data.get("user_id") != user_id:
+            if note_data["user_id"] != user_id:
                 FirebaseDB.logger.error(f"Note {note_id} does not belong to user {user_id}")
                 return False
             
             # Update the note text and font family
-            note_ref.update({
+            FirebaseDB.update_document("notes", note_id, {
                 "text": note_text,
                 "font_family": font_family,  # Update the font family
                 "timestamp": firestore.SERVER_TIMESTAMP  # Update timestamp for sorting
@@ -270,38 +272,15 @@ class FirebaseDB:
         - category: The category the note belongs to
         """
         try:
-            # Step 1: Get the user document
+            # Step 1: Get the user data
             user_doc_ref = db.collection("users").document(user_id)
-            user_doc = user_doc_ref.get()
-            
-            if not user_doc.exists:
-                FirebaseDB.logger.error(f"User document for {user_id} does not exist")
-                return
+            user_data = FirebaseDB.get_dict_from_ref(user_doc_ref)
             
             # Step 2: Get the note reference to remove
             note_ref = db.collection("notes").document(note_id)
             
             # Step 3: Remove the note reference from the category array in the user document
-            user_data = user_doc.to_dict()
-            
-            if category in user_data and isinstance(user_data[category], list):
-                # Remove the reference from the array
-                # Using arrayRemove is the best way to remove items from a Firestore array
-                user_doc_ref.update({
-                    category: firestore.ArrayRemove([note_ref])
-                })
-                
-                # If the category is now empty, you might want to remove it completely
-                # This requires a separate get and update operation
-                updated_user = user_doc_ref.get().to_dict()
-                if category in updated_user and len(updated_user[category]) == 0:
-                    # Remove the empty category field
-                    user_doc_ref.update({
-                        category: firestore.DELETE_FIELD
-                    })
-                    
-            else:
-                FirebaseDB.logger.error(f"Category {category} not found in user document or is not an array")
+            FirebaseDB.delete_note_from_category(user_id, category, user_doc_ref, user_data, note_ref)
             
             # Step 4: Delete the actual note from the general collection
             note_ref.delete()
@@ -310,6 +289,22 @@ class FirebaseDB:
             
         except Exception as e:
             FirebaseDB.logger.error(f"Error deleting note: {e}")
+
+    @staticmethod
+    def delete_note_from_category(user_id, category, user_doc_ref, user_data, note_ref):
+        if category in user_data and isinstance(user_data[category], list):
+                # Remove the reference from the array
+                # Using arrayRemove is the best way to remove items from a Firestore array
+            FirebaseDB.update_document("users", user_id, {category: firestore.ArrayRemove([note_ref])})
+                
+                # If the category is now empty, you might want to remove it completely
+                # This requires a separate get and update operation
+            updated_user = FirebaseDB.get_dict_from_ref(user_doc_ref)
+            if category in updated_user and len(updated_user[category]) == 0:
+                FirebaseDB.update_document("users", user_id, {category: firestore.DELETE_FIELD})
+                    
+        else:
+            FirebaseDB.logger.error(f"Category {category} not found in user document or is not an array")
                 
 
 
