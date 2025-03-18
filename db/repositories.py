@@ -1,9 +1,8 @@
-from firebase_admin import credentials, firestore
+from firebase_admin import firestore
 from modules.decorators import handle_firestore_errors
 from modules.loggers import LoggerSingleton
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, TypeVar, Generic, Callable
-import functools
+from typing import Dict, List, Any, Optional, TypeVar, Generic
 
 # Type definitions for better type hinting
 T = TypeVar('T')
