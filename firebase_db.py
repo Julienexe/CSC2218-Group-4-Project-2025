@@ -18,9 +18,15 @@ class FirebaseDB:
     """Handles all Firestore interactions for the Notes app"""
     logger = logger
 
+    #method to return a dictionary from a firebase reference
+    @staticmethod
+    def get_dict_from_ref(ref):
+        """Returns a dictionary from a Firestore reference"""
+        return ref.get().to_dict() if ref else None
+    
+
     #method to read a document from firestore and return it
     @staticmethod
-
     def read_document(collection_name: str, document_id: str)-> dict:
         """Reads a document from Firestore"""
         try:
@@ -252,7 +258,7 @@ class FirebaseDB:
             FirebaseDB.logger.error(f"Error deleting note: {e}")
                 
     @staticmethod
-    def get_categories(user_id):
+    def get_categories(user_id) -> dict:
         """
         Fetch all categories with their notes from Firestore
         Returns a dictionary where:
@@ -276,29 +282,26 @@ class FirebaseDB:
                     # Get each note referenced in this category
                     for note_ref in field_value:
                         try:
-                            # Get the note document
-                            note_doc = note_ref.get()
+                            # Get the note dictionary
+                            note_dict = FirebaseDB.get_dict_from_ref(note_ref)
                             
-                            if note_doc.exists:
-                                # Get the note data
-                                note_data = note_doc.to_dict()
-                                
+                            if note_dict:
                                 # Add the note ID, text, and font_family to our list
                                 notes_list.append({
-                                    "id": note_doc.id,
-                                    "text": note_data.get("text", ""),
-                                    "font_family": note_data.get("font_family", "Arial")  # Include the font family
+                                    "id": note_ref.id,
+                                    "text": note_dict.get("text", ""),
+                                    "font_family": note_dict.get("font_family", "Arial")  # Include the font family
                                 })
-                            else:
+                            else:    
                                 FirebaseDB.logger.error(f"Note {note_ref.id} referenced in {field_name} doesn't exist")
                         except Exception as e:
                             FirebaseDB.logger.error(f"Error fetching note {note_ref.id}: {e}")
-                    
                     # Only add the category if it has notes
                     if notes_list:
                         categories_dict[field_name] = notes_list
         
         except Exception as e:
             FirebaseDB.logger.error(f"Error fetching categories for user {user_id}: {e}")
-        
         return categories_dict
+                            
+                            
