@@ -1,5 +1,6 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
+import logging
 
 # Initialize Firebase
 cred = credentials.Certificate(r"serviceAccountKey.json")
@@ -9,17 +10,13 @@ cred = credentials.Certificate(r"serviceAccountKey.json")
 # Firestore client
 db = firestore.client()
 
-class Logger:
-    """Simple class to log messages to the console"""
-    
-    @staticmethod
-    def log(message):
-        """Logs a message to the console"""
-        print(message)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class FirebaseDB:
     """Handles all Firestore interactions for the Notes app"""
-    logger = Logger()
+    logger = logger
     
 
     @staticmethod
@@ -30,7 +27,7 @@ class FirebaseDB:
             # Return a list of notes with id and text
             return [{"id": note.id, "text": note.to_dict()["text"]} for note in notes_ref]
         except Exception as e:
-            print(f"Error getting notes: {e}")
+            FirebaseDB.logger.error(f"Error getting notes: {e}")
             return []
     
     @staticmethod
@@ -45,7 +42,7 @@ class FirebaseDB:
             users_ref = db.collection("users")
             users_ref.document(user_id).set({"email": email})
         except Exception as e:
-            print(f"Error adding user: {e}")
+            FirebaseDB.logger.error(f"Error adding user: {e}")
             
     @staticmethod
     def add_note(user_id, category, note_text, font_family="Arial"):
@@ -58,7 +55,7 @@ class FirebaseDB:
             note_ref = FirebaseDB.add_note_to_general_collection(user_id, note_text, font_family)
             
             if not note_ref:
-                print("Failed to create note in general collection")
+                FirebaseDB.logger.error("Failed to create note in general collection")
                 return None
                 
             # Now update the user's document to include this note reference in the specified category
@@ -93,7 +90,7 @@ class FirebaseDB:
             return note_ref.id  # Return the ID of the new note
             
         except Exception as e:
-            print(f"Error adding note: {e}")
+            FirebaseDB.logger.error(f"Error adding note: {e}")
             return None
         
     @staticmethod
@@ -116,7 +113,7 @@ class FirebaseDB:
             return new_note_ref
             
         except Exception as e:
-            print(f"Error adding note: {e}")
+            FirebaseDB.logger.error(f"Error adding note: {e}")
             return None
         
     @staticmethod
@@ -142,14 +139,14 @@ class FirebaseDB:
             note_doc = note_ref.get()
             
             if not note_doc.exists:
-                print(f"Note {note_id} does not exist")
+                FirebaseDB.logger.error(f"Note {note_id} does not exist")
                 return False
                 
             note_data = note_doc.to_dict()
             
             # Verify the note belongs to the user
             if note_data.get("user_id") != user_id:
-                print(f"Note {note_id} does not belong to user {user_id}")
+                FirebaseDB.logger.error(f"Note {note_id} does not belong to user {user_id}")
                 return False
             
             # Update the note text and font family
@@ -162,7 +159,7 @@ class FirebaseDB:
             return True
             
         except Exception as e:
-            print(f"Error editing note: {e}")
+            FirebaseDB.logger.error(f"Error editing note: {e}")
             return False
         
     @staticmethod
@@ -183,7 +180,7 @@ class FirebaseDB:
             user_doc = user_doc_ref.get()
             
             if not user_doc.exists:
-                print(f"User document for {user_id} does not exist")
+                FirebaseDB.logger.error(f"User document for {user_id} does not exist")
                 return
             
             # Step 2: Get the note reference to remove
@@ -209,15 +206,15 @@ class FirebaseDB:
                     })
                     
             else:
-                print(f"Category {category} not found in user document or is not an array")
+                FirebaseDB.logger.error(f"Category {category} not found in user document or is not an array")
             
             # Step 4: Delete the actual note from the general collection
             note_ref.delete()
             
-            print(f"Successfully deleted note {note_id} from category {category}")
+            FirebaseDB.logger.info(f"Successfully deleted note {note_id} from category {category}")
             
         except Exception as e:
-            print(f"Error deleting note: {e}")
+            FirebaseDB.logger.error(f"Error deleting note: {e}")
                 
     @staticmethod
     def get_categories(user_id):
@@ -236,7 +233,7 @@ class FirebaseDB:
             user_doc = user_doc_ref.get()
             
             if not user_doc.exists:
-                print(f"User document for {user_id} does not exist")
+                FirebaseDB.logger.error(f"User document for {user_id} does not exist")
                 return categories_dict
             
             # Get all fields in the user document
@@ -266,15 +263,15 @@ class FirebaseDB:
                                     "font_family": note_data.get("font_family", "Arial")  # Include the font family
                                 })
                             else:
-                                print(f"Note {note_ref.id} referenced in {field_name} doesn't exist")
+                                FirebaseDB.logger.error(f"Note {note_ref.id} referenced in {field_name} doesn't exist")
                         except Exception as e:
-                            print(f"Error fetching note {note_ref.id}: {e}")
+                            FirebaseDB.logger.error(f"Error fetching note {note_ref.id}: {e}")
                     
                     # Only add the category if it has notes
                     if notes_list:
                         categories_dict[field_name] = notes_list
         
         except Exception as e:
-            print(f"Error fetching categories for user {user_id}: {e}")
+            FirebaseDB.logger.error(f"Error fetching categories for user {user_id}: {e}")
         
         return categories_dict
