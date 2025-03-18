@@ -1,7 +1,5 @@
-import firebase_admin
 from firebase_admin import credentials, firestore
-import logging
-
+from modules.loggers import Logger
 # Initialize Firebase
 cred = credentials.Certificate(r"serviceAccountKey.json")
 # Initialize Firebase Admin SDK
@@ -10,13 +8,15 @@ cred = credentials.Certificate(r"serviceAccountKey.json")
 # Firestore client
 db = firestore.client()
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+class Reader:
+    pass
+
+class Writer:
+    pass
 
 class FirebaseDB:
     """Handles all Firestore interactions for the Notes app"""
-    logger = logger
+    logger = Logger("FirebaseDB").get_logger()
 
     #method to return a dictionary from a firebase reference
     @staticmethod
@@ -173,7 +173,7 @@ class FirebaseDB:
                 FirebaseDB.logger.error("Failed to create note in general collection")
                 return None
                 
-            user_data = FirebaseDB.get_dict_from_ref(user_doc_ref = db.collection("users").document(user_id)) or {}
+            user_data = FirebaseDB.get_dict_from_ref(db.collection("users").document(user_id)) or {}
             
             # Check if this category already exists in the user document
             if category in user_data:
