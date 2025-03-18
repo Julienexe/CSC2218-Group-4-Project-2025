@@ -277,25 +277,7 @@ class FirebaseDB:
                 # Check if the field value is an array (potential category)
                 if isinstance(field_value, list):
                     # This field is likely a category with an array of note references
-                    notes_list = []
-                    
-                    # Get each note referenced in this category
-                    for note_ref in field_value:
-                        try:
-                            # Get the note dictionary
-                            note_dict = FirebaseDB.get_dict_from_ref(note_ref)
-                            
-                            if note_dict:
-                                # Add the note ID, text, and font_family to our list
-                                notes_list.append({
-                                    "id": note_ref.id,
-                                    "text": note_dict.get("text", ""),
-                                    "font_family": note_dict.get("font_family", "Arial")  # Include the font family
-                                })
-                            else:    
-                                FirebaseDB.logger.error(f"Note {note_ref.id} referenced in {field_name} doesn't exist")
-                        except Exception as e:
-                            FirebaseDB.logger.error(f"Error fetching note {note_ref.id}: {e}")
+                    notes_list = FirebaseDB.load_category_notes(field_name, field_value)
                     # Only add the category if it has notes
                     if notes_list:
                         categories_dict[field_name] = notes_list
@@ -303,5 +285,27 @@ class FirebaseDB:
         except Exception as e:
             FirebaseDB.logger.error(f"Error fetching categories for user {user_id}: {e}")
         return categories_dict
+
+    @staticmethod
+    def load_category_notes(field_name, field_value )-> list:
+        """ Load notes from a category field in a user document """
+        notes_list=[]
+        for note_ref in field_value:
+            try:
+                            # Get the note dictionary
+                note_dict = FirebaseDB.get_dict_from_ref(note_ref)
+                            
+                if note_dict:
+                                # Add the note ID, text, and font_family to our list
+                    notes_list.append({
+                                    "id": note_ref.id,
+                                    "text": note_dict.get("text", ""),
+                                    "font_family": note_dict.get("font_family", "Arial")  # Include the font family
+                                })
+                else:    
+                    FirebaseDB.logger.error(f"Note {note_ref.id} referenced in {field_name} doesn't exist")
+            except Exception as e:
+                FirebaseDB.logger.error(f"Error fetching note {note_ref.id}: {e}")
+        return notes_list
                             
                             
