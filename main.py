@@ -79,6 +79,7 @@ class FileSessionStrategy(SessionStrategy):
             self.logger.error(f"Error clearing session: {e}")
             return False
 
+
 class MemorySessionStrategy(SessionStrategy):
     _session_data = None
     
@@ -150,13 +151,7 @@ class AuthFacade:
         command = LoginCommand(self.auth_manager, email, password)
         result = command.execute()
         
-        if result["success"]:
-            self.session_strategy.save_session(result["user_id"])
-            self.auth_event_subject.notify("login_success", result["user_id"])
-        else:
-            self.auth_event_subject.notify("login_failure", result["message"])
-        
-        return result
+
     
     def register(self, email, password):
         command = RegisterCommand(self.auth_manager, email, password)
