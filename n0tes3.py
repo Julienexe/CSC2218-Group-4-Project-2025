@@ -13,7 +13,7 @@ import io
 
 db = FirebaseDB()
 class Note(ft.Container):
-    def __init__(self, note_id, note_text, note_delete, category, user_id, page=None, font_family="Arial", tags=None):
+    def __init__(self, note_id, note_text, note_delete, category, user_id, page=None, font_family="Arial"):
         super().__init__()
         self.db = db
         self.note_id = note_id
@@ -22,7 +22,6 @@ class Note(ft.Container):
         self.user_id = user_id
         self.note_delete = note_delete
         self.font_family = font_family
-        self.tags = tags or []
         self.page = page  # Store the page reference
         self.on_click = self.handle_click
         # Debugging: Verify the page object
@@ -34,27 +33,15 @@ class Note(ft.Container):
         self.border_radius = 12
         self.padding = 10
 
-        # Build the tags display
-        tags_row = ft.Row(
-            wrap=True,
-            spacing=5,
-            visible=len(self.tags) > 0,
-            controls=[
-                ft.Chip(label=f"@{tag}", bgcolor="#4CAF50", label_style=ft.TextStyle(color="white", size=12))
-                for tag in self.tags
-            ]
-        )
-
-        # Build note content with text and tags
+        # Build note content with text
         note_content = ft.Column(
             spacing=5,
             controls=[
-                ft.Text(self.note_text, color="white", font_family=self.font_family),
-                tags_row
+                ft.Text(self.note_text, color="white", font_family=self.font_family)
             ]
         )
 
-        # Initially create with just the text and tags, no action buttons
+        # Initially create with just the text, no action buttons
         self.content = ft.Row(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -65,7 +52,6 @@ class Note(ft.Container):
                     visible=False,  # Initially hidden
                     controls=[
                         ft.IconButton(icon=ft.icons.SHARE_OUTLINED, icon_color="cyan", tooltip="Share Note", on_click=self.share_clicked),
-                        ft.IconButton(icon=ft.icons.PERSON_ADD_ALT_1_OUTLINED, icon_color="yellow", tooltip="Tag People", on_click=self.tag_clicked),
                         ft.IconButton(icon=ft.icons.CLOUD_UPLOAD_OUTLINED, icon_color="lightblue", tooltip="Upload to Drive", on_click=self.drive_clicked),
                         ft.IconButton(icon=ft.icons.CREATE_OUTLINED, icon_color="white", tooltip="Edit Note", on_click=self.edit_clicked),
                         ft.IconButton(icon=ft.icons.DELETE_OUTLINE, icon_color="red", tooltip="Delete Note", on_click=self.delete_clicked),
@@ -108,7 +94,7 @@ class Note(ft.Container):
             max_lines=5,
         )
         # Replace edit button with save button
-        self.content.controls[1].controls[3] = ft.IconButton(
+        self.content.controls[1].controls[2] = ft.IconButton(
             icon=ft.icons.DONE_OUTLINE_OUTLINED,
             icon_color="green",
             tooltip="Save Note",
@@ -126,14 +112,13 @@ class Note(ft.Container):
         content_column = self.content.controls[0]
         new_text = content_column.controls[0].value
         self.note_text = new_text
-        # Include the font family and tags when editing the note
+        # Include the font family when editing the note
         self.db.edit_note(
             note_id=self.note_id,
             note_text=self.note_text,
             user_id=self.user_id,
             category=self.category,
-            font_family=self.font_family,
-            tags=self.tags
+            font_family=self.font_family
         )
         # Replace the TextField with a Text widget and reapply the font family
         content_column.controls[0] = ft.Text(
@@ -142,7 +127,7 @@ class Note(ft.Container):
             font_family=self.font_family
         )
         # Replace save button with edit button
-        self.content.controls[1].controls[3] = ft.IconButton(
+        self.content.controls[1].controls[2] = ft.IconButton(
             icon=ft.icons.CREATE_OUTLINED,
             icon_color="white",
             tooltip="Edit Note",
@@ -250,133 +235,6 @@ class Note(ft.Container):
 
         # Close the share dialog after initiating share
         self.close_dialog()
-
-    def tag_clicked(self, e):
-        """
-        Open a dialog to tag people in the note.
-        """
-        # Ensure the page reference is set
-        self.handle_click(e)
-        self.reset_page_overlay()
-
-        # Text field for entering tags
-        tag_input = ft.TextField(
-            hint_text="Enter username (without @)",
-            bgcolor="#2D3B60",
-            color="white",
-        )
-
-        # Create a list of existing tags
-        tag_chips = ft.Row(
-            wrap=True,
-            spacing=5,
-            controls=[
-                ft.Chip(
-                    label=f"@{tag}",
-                    bgcolor="#4CAF50",
-                    label_style=ft.TextStyle(color="white", size=12),
-                    delete_icon=ft.icons.CLOSE,
-                    on_delete=lambda _, t=tag: self.remove_tag(t, tag_chips)
-                ) for tag in self.tags
-            ]
-        )
-
-        # Create the tagging dialog
-        tag_dialog = ft.AlertDialog(
-            title=ft.Text("Tag People"),
-            content=ft.Column([
-                ft.Text("Current tags:", color="white"),
-                tag_chips,
-                ft.Text("Add new tag:", color="white"),
-                tag_input,
-            ], spacing=10),
-            actions=[
-                ft.TextButton("Add Tag", on_click=lambda _: self.add_tag(tag_input.value, tag_chips)),
-                ft.TextButton("Save", on_click=lambda _: self.save_tags(tag_chips)),
-                ft.TextButton("Cancel", on_click=lambda _: self.close_dialog()),
-            ],
-           
-        )
-
-        # Show the dialog using page overlay
-        if hasattr(self.page, 'overlay') and isinstance(self.page.overlay, list):
-            self.page.overlay.append(tag_dialog)
-            tag_dialog.open = True
-            self.page.update()
-        else:
-            print("Error: Page does not have an overlay list attribute!")
-
-    def add_tag(self, username, tag_chips):
-        """
-        Add a new tag to the tag chips display.
-        """
-        if not username or username.strip() == "":
-            return
-
-        username = username.strip()
-        # Remove @ if it was included
-        if username.startswith('@'):
-            username = username[1:]
-
-        # Add the tag chip if it's not already there
-        if username not in self.tags:
-            tag_chips.controls.append(
-                ft.Chip(
-                    label=f"@{username}",
-                    bgcolor="#4CAF50",
-                    label_style=ft.TextStyle(color="white", size=12),
-                    delete_icon=ft.icons.CLOSE,
-                    on_delete=lambda _, t=username: self.remove_tag(t, tag_chips)
-                )
-            )
-            self.page.update()
-
-    def remove_tag(self, tag, tag_chips):
-        """
-        Remove a tag from the tag chips display.
-        """
-        # Find and remove the chip with this tag
-        for i, chip in enumerate(tag_chips.controls):
-            if chip.label == f"@{tag}":
-                tag_chips.controls.pop(i)
-                break
-        self.page.update()
-
-    def save_tags(self, tag_chips):
-        """
-        Save the tags back to the note.
-        """
-        # Extract usernames from tag chips
-        new_tags = []
-        for chip in tag_chips.controls:
-            username = chip.label[1:]  # Remove the @ symbol
-            new_tags.append(username)
-
-        # Update the tags list
-        self.tags = new_tags
-
-        # Update tags in Firebase
-        self.db.edit_note(
-            note_id=self.note_id,
-            note_text=self.note_text,
-            user_id=self.user_id,
-            category=self.category,
-            font_family=self.font_family,
-            tags=self.tags
-        )
-
-        # Update the tags display in the note
-        content_column = self.content.controls[0]
-        tags_row = content_column.controls[1]
-        tags_row.controls = [
-            ft.Chip(label=f"@{tag}", bgcolor="#4CAF50", label_style=ft.TextStyle(color="white", size=12))
-            for tag in self.tags
-        ]
-        tags_row.visible = len(self.tags) > 0
-
-        # Close the dialog
-        self.close_dialog()
-        self.update()
 
     def drive_clicked(self, e):
         """
@@ -589,15 +447,6 @@ class NotesApp(ft.Column):
             border_color="#4CAF50",
         )
         
-        # Add text field for tagging people
-        self.tags_input = ft.TextField(
-            hint_text="Tag people (comma separated, no @)",
-            expand=True,
-            bgcolor="#2D3B60",
-            color="white",
-            border_color="#4CAF50",
-        )
-        
         # Use a ListView for scrollable categories
         self.categories = ft.ListView(
             expand=True,  # Make the ListView expand to fill available space
@@ -632,12 +481,6 @@ class NotesApp(ft.Column):
                 ft.Row([
                     ft.Text("Font:", width=80, color="white"),
                     self.font_dropdown
-                ], alignment=ft.MainAxisAlignment.START),
-                
-                # Row for tags input
-                ft.Row([
-                    ft.Text("Tags:", width=80, color="white"),
-                    self.tags_input
                 ], alignment=ft.MainAxisAlignment.START),
                 
                 # Buttons row
@@ -723,7 +566,6 @@ class NotesApp(ft.Column):
         self.new_note.value = ""
         self.category_input.value = ""
         self.category_dropdown.value = None
-        self.tags_input.value = ""
         self.add_button.visible = True  # Show add button
         self.page.update()
 
@@ -745,8 +587,7 @@ class NotesApp(ft.Column):
                     category_name,  
                     self.userID,
                     page=self.page,  # Pass the page reference
-                    font_family=note.get("font_family", "Arial"),
-                    tags=note.get("tags", [])  # Load tags from Firebase
+                    font_family=note.get("font_family", "Arial")
                 ) for note in notes_list
             ]
             
@@ -809,20 +650,12 @@ class NotesApp(ft.Column):
             # Use the selected font from the dropdown
             selected_font = self.font_dropdown.value
             
-            # Parse tags
-            tags = []
-            if self.tags_input.value:
-                tags = [tag.strip() for tag in self.tags_input.value.split(',') if tag.strip()]
-                # Remove @ symbol if present
-                tags = [tag[1:] if tag.startswith('@') else tag for tag in tags]
-            
-            # Include the font family and tags when adding the note
+            # Include the font family when adding the note
             note_id = self.db.add_note(
                 self.userID, 
                 category, 
                 note_text, 
-                font_family=selected_font,
-                tags=tags
+                font_family=selected_font
             )
             
             if note_id:
@@ -833,8 +666,7 @@ class NotesApp(ft.Column):
                     category, 
                     self.userID, 
                     page=self.page,  # Pass the page reference 
-                    font_family=selected_font,
-                    tags=tags
+                    font_family=selected_font
                 )
                 
                 category_container = next((c for c in self.categories.controls if isinstance(c, ft.Container) and c.content.controls[0].value == category), None)
@@ -858,7 +690,6 @@ class NotesApp(ft.Column):
                 self.new_note.value = ""
                 self.category_input.value = ""
                 self.category_dropdown.value = None
-                self.tags_input.value = ""
                 self.input_container.visible = False
                 self.add_button.visible = True  # Show add button again
                 self.page.update()
@@ -880,5 +711,3 @@ class NotesApp(ft.Column):
                             self.active_category = None
                     self.page.update()
                     break
-                
-    
