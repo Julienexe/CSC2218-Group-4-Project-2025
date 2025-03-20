@@ -11,7 +11,7 @@ class FirebaseClient:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(FirebaseClient, cls).__new__(cls)
-            cred = credentials.Certificate(r"serviceAccountKey.json")
+            cred = credentials.Certificate(r"C:/Users/Admin/Desktop/Notes App/CSC2218-Group-4-Project-2025/serviceAccountKey.json")
             cls._instance.app = firebase_admin.initialize_app(cred)
             cls._instance.logger = Logger(__name__).get_logger()
         return cls._instance
@@ -150,6 +150,14 @@ class AuthFacade:
     def login(self, email, password):
         command = LoginCommand(self.auth_manager, email, password)
         result = command.execute()
+        
+        if result["success"]:
+            self.session_strategy.save_session(result["user_id"])
+            self.auth_event_subject.notify("login_success", result["user_id"])
+        else:
+            self.auth_event_subject.notify("login_failure", result["message"])
+        
+        return result
         
 
     
