@@ -78,13 +78,8 @@ class Note(ft.Container):
         """
         Replace the Text widget with a TextField for editing the note.
         """
-        # Ensure the page reference is set
-        self.handle_click(e)
-
-        # Get the content column
-        content_column = self.content.controls[0]
-        # Replace the text with a TextField
-        content_column.controls[0] = ft.TextField(
+        
+        self.content.controls[0] = ft.TextField(
             value=self.note_text,
             expand=True,
             color="white",
@@ -94,7 +89,7 @@ class Note(ft.Container):
             max_lines=5,
         )
         # Replace edit button with save button
-        self.content.controls[1].controls[2] = ft.IconButton(
+        self.content.controls[1].controls[0] = ft.IconButton(
             icon=ft.icons.DONE_OUTLINE_OUTLINED,
             icon_color="green",
             tooltip="Save Note",
@@ -106,11 +101,8 @@ class Note(ft.Container):
         """
         Save the edited note text and update the Firebase database.
         """
-        # Ensure the page reference is set
-        self.handle_click(e)
-
-        content_column = self.content.controls[0]
-        new_text = content_column.controls[0].value
+       
+        new_text = self.content.controls[0].value
         self.note_text = new_text
         # Include the font family when editing the note
         self.db.edit_note(
@@ -121,13 +113,14 @@ class Note(ft.Container):
             font_family=self.font_family
         )
         # Replace the TextField with a Text widget and reapply the font family
-        content_column.controls[0] = ft.Text(
+        self.content.controls[0] = ft.Text(
             self.note_text,
             color="white",
+            expand="True",
             font_family=self.font_family
         )
         # Replace save button with edit button
-        self.content.controls[1].controls[2] = ft.IconButton(
+        self.content.controls[1].controls[0] = ft.IconButton(
             icon=ft.icons.CREATE_OUTLINED,
             icon_color="white",
             tooltip="Edit Note",
