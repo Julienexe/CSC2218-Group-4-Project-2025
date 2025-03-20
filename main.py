@@ -11,7 +11,11 @@ class FirebaseClient:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(FirebaseClient, cls).__new__(cls)
+<<<<<<< HEAD
             cred = credentials.Certificate(r"C:/Users/Admin/Desktop/Notes App/CSC2218-Group-4-Project-2025/serviceAccountKey.json")
+=======
+            cred = credentials.Certificate(r"CSC2218-Group-4-Project-2025\serviceAccountKey.json")
+>>>>>>> e48eacd9bf68cf31256b606d97835fa28fea3032
             cls._instance.app = firebase_admin.initialize_app(cred)
             cls._instance.logger = Logger(__name__).get_logger()
         return cls._instance
