@@ -24,26 +24,21 @@ class FirebaseDB:
         """Gets all notes for a user"""
         return self.note_repo.get_user_notes(user_id)
     
-    def add_note(self, user_id: str, category: str, note_text: str, font_family: str = "Arial", tags: List[str] = None) -> Optional[str]:
+    def add_note(self, user_id: str, category: str, note_text: str, font_family: str = "Arial") -> Optional[str]:
         """
-        Adds a note to a category with optional font family and tags
+        Adds a note to a category with optional font family
         
         Args:
             user_id (str): The user ID
             category (str): The category name
             note_text (str): The text content of the note
             font_family (str, optional): Font family for the note. Defaults to "Arial".
-            tags (List[str], optional): List of users tagged in the note. Defaults to None.
             
         Returns:
             Optional[str]: The note ID if successful, None otherwise
         """
-        # Initialize tags if None
-        if tags is None:
-            tags = []
-            
         # First add the note to the general collection
-        note_ref = self.note_repo.create_note(user_id, note_text, font_family, tags)
+        note_ref = self.note_repo.create_note(user_id, note_text, font_family)
         
         if not note_ref:
             return None
@@ -58,9 +53,9 @@ class FirebaseDB:
         
         return note_ref.id
     
-    def edit_note(self, note_id: str, note_text: str, user_id: str, category: str, font_family: str = "Arial", tags: List[str] = None) -> bool:
+    def edit_note(self, note_id: str, note_text: str, user_id: str, category: str, font_family: str = "Arial") -> bool:
         """
-        Edits a note with updated text, font family, and tags
+        Edits a note with updated text and font family
         
         Args:
             note_id (str): The note ID
@@ -68,22 +63,17 @@ class FirebaseDB:
             user_id (str): The user ID for verification
             category (str): The category name
             font_family (str, optional): Font family for the note. Defaults to "Arial".
-            tags (List[str], optional): List of users tagged in the note. Defaults to None.
             
         Returns:
             bool: True if successful, False otherwise
         """
-        # Initialize tags if None
-        if tags is None:
-            tags = []
-            
         note_data = self.note_repo.get_note(note_id)
         
         # Verify the note belongs to the user
         if not note_data or note_data.get("user_id") != user_id:
             return False
         
-        return self.note_repo.update_note(note_id, note_text, font_family, tags)
+        return self.note_repo.update_note(note_id, note_text, font_family)
     
     def delete_note(self, user_id: str, note_id: str, category: str) -> bool:
         """
@@ -152,28 +142,6 @@ class FirebaseDB:
         """
         return self.note_repo.get_note(note_id)
     
-    def get_user_tags(self, user_id: str) -> List[str]:
-        """
-        Gets a list of all tags used by a user
-        
-        Args:
-            user_id (str): The user ID
-            
-        Returns:
-            List[str]: List of unique tags used by the user
-        """
-        # Get all the user's notes
-        notes = self.note_repo.get_user_notes(user_id)
-        
-        # Extract all tags
-        all_tags = []
-        for note in notes:
-            if "tags" in note and note["tags"]:
-                all_tags.extend(note["tags"])
-        
-        # Return unique tags
-        return list(set(all_tags))
-    
     def search_notes(self, user_id: str, search_term: str) -> List[Dict[str, Any]]:
         """
         Searches for notes containing the search term
@@ -230,24 +198,3 @@ class FirebaseDB:
             return True
         except Exception:
             return False
-    
-    def get_notes_by_tag(self, user_id: str, tag: str) -> List[Dict[str, Any]]:
-        """
-        Gets all notes that contain a specific tag
-        
-        Args:
-            user_id (str): The user ID
-            tag (str): The tag to search for
-            
-        Returns:
-            List[Dict[str, Any]]: List of notes containing the tag
-        """
-        notes = self.note_repo.get_user_notes(user_id)
-        
-        # Filter notes that contain the tag
-        matching_notes = [
-            note for note in notes 
-            if "tags" in note and tag in note.get("tags", [])
-        ]
-        
-        return matching_notes
