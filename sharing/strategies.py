@@ -131,7 +131,7 @@ class ThreadsShareStrategy(ShareStrategy):
                 ft.Text("\nYour note has been copied to clipboard.", color="green")
             ]),
             actions=[
-                ft.TextButton("OK", on_click=lambda e: setattr(dialog, "open", False))
+                ft.TextButton("OK", on_click=lambda e: page.close(dialog))
             ]
         )
         
