@@ -1,3 +1,4 @@
+from typing import Callable
 import flet as ft
 from firebase_db import FirebaseDB
 import webbrowser
@@ -10,6 +11,8 @@ from googleapiclient.http import MediaIoBaseUpload
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import io
+
+from sharing.strategies import SocialShareContext
 
 db = FirebaseDB()
 class Note(ft.Container):
@@ -24,6 +27,8 @@ class Note(ft.Container):
         self.font_family = font_family
         self.page = page  # Store the page reference
         self.on_click = self.handle_click
+        #create a social share context singleton
+        self.share_context = SocialShareContext()
         # Debugging: Verify the page object
         if not self.page:
             print("Warning: Page reference is not set during initialization!")
@@ -162,13 +167,20 @@ class Note(ft.Container):
             return
 
         # Create a dialog for sharing options
+        def handle_close():
+            self.close_dialog(share_dialog)
+        
+        def handle_share(platform:str):
+            handle_close()
+            self.share_context.share(platform,self.page,self.note_text)
+
         share_dialog = ft.AlertDialog(
             title=ft.Text("Share Note"),
             content=ft.Column([
                 ft.ElevatedButton(
                     "Share to X (Twitter)",
                     icon=ft.icons.FLUTTER_DASH,
-                    on_click=lambda _: self.share_to_platform("twitter")
+                    on_click=lambda _: handle_share("twitter")
                 ),
                 ft.ElevatedButton(
                     "Share to Facebook",
@@ -187,47 +199,15 @@ class Note(ft.Container):
                 ),
             ], spacing=10),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda _: self.close_dialog()),
+                ft.TextButton("Cancel", on_click=lambda _: handle_close()),
             ],
-            on_dismiss=lambda _: (self.close_dialog(), print("Dialog dismissed")),
+            on_dismiss=lambda _: (print("Dialog dismissed")),
         )
 
-        # Show the dialog using page overlay
-        if hasattr(self.page, 'overlay') and isinstance(self.page.overlay, list):
-            self.page.overlay.append(share_dialog)
-            share_dialog.open = True
-            self.page.update()
-        else:
-            print("Error: Page does not have an overlay list attribute!")
-
-    def share_to_platform(self, platform):
-        """
-        Share the note to the specified social media platform.
-        """
-        encoded_text = urllib.parse.quote(self.note_text)
-
-        # Different sharing URLs for different platforms
-        if platform == "twitter":
-            url = f"https://twitter.com/intent/tweet?text={encoded_text}"
-            webbrowser.open(url)
-        elif platform == "facebook":
-            url = f"https://www.facebook.com/sharer/sharer.php?u=https://mynotesapp.com&quote={encoded_text}"
-            webbrowser.open(url)
-        elif platform == "instagram":
-            # Instagram doesn't have a web share API, show instructions
-            self.show_info_dialog(
-                "Instagram Sharing",
-                "To share to Instagram:\n1. Copy your note text\n2. Open Instagram app\n3. Create a new post or story\n4. Paste your text"
-            )
-        elif platform == "threads":
-            # Threads doesn't have a web share API either
-            self.show_info_dialog(
-                "Threads Sharing",
-                "To share to Threads:\n1. Copy your note text\n2. Open Threads app\n3. Create a new thread\n4. Paste your text"
-            )
-
-        # Close the share dialog after initiating share
-        self.close_dialog()
+        # Show the dialog using page open
+        self.page.open(share_dialog)
+        self.page.update()
+        
 
     def drive_clicked(self, e):
         """
@@ -328,25 +308,20 @@ class Note(ft.Container):
                 ft.TextButton("OK", on_click=lambda _: self.close_dialog()),
             ],
         )
-        
-        # Show the dialog using page overlay
-        if hasattr(self.page, 'overlay') and isinstance(self.page.overlay, list):
-            self.page.overlay.append(dialog)
-            dialog.open = True
-            self.page.update()
-        else:
-            print("Error: Page does not have an overlay list attribute!")
 
-    def close_dialog(self):
+        #add dialog to page
+        self.page.open(ft.SnackBar(ft.Text(f"Sending to X")))
+
+    
+    def close_dialog(self,dialog):
         """
         Close any open dialogs and completely clear the overlay.
         """
-        if hasattr(self.page, 'overlay') and isinstance(self.page.overlay, list):
-            # Clear the entire overlay list instead of removing items one by one
-            self.page.overlay.clear()
-            self.page.update()
-        else:
-            print("Error: Page does not have an overlay list attribute!")
+
+        #close dialog using page close
+        self.page.close(dialog)
+        self.page.update()
+        
         
     def reset_page_overlay(self):
         """
