@@ -78,13 +78,15 @@
 
 ##### Tasks  
 
-- **Reminder System**  
-  - Flet notification scheduling  
-  - Python `datetime` utilities  
+- **Social Sharing System (Extended)**  
+  - Integration with X, FaceBook, Instagram and Threads  
   
-- **Label/Filter System**  
-  - Multi-label Firestore architecture  
-  - Filterable `ListView` adapter  
+- **Uploading Notes to Google Drive**  
+  - Google OAuth2 set up  
+  - Google Cloud Project Console Setup
+
+- **Options Buttons On Notes**  
+  - ToDo
 
 ---
 
