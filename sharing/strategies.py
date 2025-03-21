@@ -136,8 +136,7 @@ class ThreadsShareStrategy(ShareStrategy):
             ]
         )
         
-        page.dialog = dialog
-        dialog.open = True
+        page.open(dialog)
         page.update()
 
 # Share Context - manages the sharing strategies
