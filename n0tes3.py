@@ -188,17 +188,17 @@ class Note(ft.Container):
                 ft.ElevatedButton(
                     "Share to Facebook",
                     icon=ft.icons.FACEBOOK,
-                    on_click=lambda _: self.share_to_platform("facebook")
+                    on_click=lambda _: handle_share("facebook")
                 ),
                 ft.ElevatedButton(
                     "Share to Instagram",
                     icon=ft.icons.CAMERA_ALT,
-                    on_click=lambda _: self.share_to_platform("instagram")
+                    on_click=lambda _: handle_share("instagram")
                 ),
                 ft.ElevatedButton(
                     "Share to Threads",
                     icon=ft.icons.THREESIXTY,
-                    on_click=lambda _: self.share_to_platform("threads")
+                    on_click=lambda _: handle_share("threads")
                 ),
             ], spacing=10),
             actions=[
