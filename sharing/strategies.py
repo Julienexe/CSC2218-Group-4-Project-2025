@@ -106,8 +106,7 @@ class InstagramShareStrategy(ShareStrategy):
             ]
         )
         
-        page.dialog = dialog
-        dialog.open = True
+        page.open(dialog)
         page.update()
 
 # Concrete Threads Share Strategy
