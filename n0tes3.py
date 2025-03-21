@@ -13,6 +13,9 @@ from google.auth.transport.requests import Request
 import io
 
 from sharing.strategies import SocialShareContext
+from storage.factory import StorageFactory
+
+
 
 db = FirebaseDB()
 class Note(ft.Container):
@@ -216,6 +219,7 @@ class Note(ft.Container):
         # Ensure the page reference is set
         self.handle_click(e)
         self.reset_page_overlay()
+        
         # Create a dialog to show upload status
         upload_dialog = ft.AlertDialog(
             title=ft.Text("Upload to Google Drive"),
@@ -223,79 +227,96 @@ class Note(ft.Container):
                 ft.Text("Uploading note to Google Drive..."),
                 ft.ProgressRing(),
             ]),
-            
         )
 
-        # Show the dialog using page overlay
-        if hasattr(self.page, 'overlay') and isinstance(self.page.overlay, list):
-            self.page.overlay.append(upload_dialog)
-            upload_dialog.open = True
-            self.page.update()
-        else:
-            print("Error: Page does not have an overlay list attribute!")
-
-        # Attempt to upload note to Google Drive
-        try:
-            # Upload to Drive (this will be implemented with a separate function)
-            success = self.upload_to_drive()
-
-            if success:
-                # Show success message
-                upload_dialog.content = ft.Text("Note successfully uploaded to Google Drive!")
-                upload_dialog.actions = [
-                    ft.TextButton("OK", on_click=lambda _: self.close_dialog()),
-                ]
-            else:
-                # Show error message
-                upload_dialog.content = ft.Text("Failed to upload note. Please check your Google Drive permissions.")
-                upload_dialog.actions = [
-                    ft.TextButton("OK", on_click=lambda _: self.close_dialog()),
-                ]
-        except Exception as ex:
-            # Show error message
-            upload_dialog.content = ft.Text(f"Error: {str(ex)}")
-            upload_dialog.actions = [
-                ft.TextButton("OK", on_click=lambda _: self.close_dialog()),
-            ]
-
+        # Show the dialog
+        self.page.open(upload_dialog)
         self.page.update()
 
+        # This ensures the dialog is shown before we start the upload
+        def do_upload():
+            try:
+                # Attempt to upload to Drive using the strategy pattern
+                result = self.upload_to_drive()
+                
+                # Close the progress dialog
+                self.page.close(upload_dialog)
+                
+                # Show appropriate dialog based on result
+                if result.get('success'):
+                    self.show_drive_success_dialog(result.get('link'))
+                else:
+                    self.show_info_dialog(
+                        "Upload Error", 
+                        f"Failed to upload: {result.get('message')}\n\n{result.get('error', '')}"
+                    )
+                
+                self.page.update()
+                
+            except Exception as ex:
+                # Show error message
+                self.page.close(upload_dialog)
+                self.show_info_dialog(
+                    "Upload Error", 
+                    f"An unexpected error occurred: {str(ex)}"
+                )
+                self.page.update()
+
+        # Schedule the upload to happen after the dialog is shown
+        do_upload()
+
+
+
+    # Replace the upload_to_drive method with this implementation
     def upload_to_drive(self):
         """
-        Upload the note to Google Drive.
+        Upload the note to Google Drive using the storage strategy.
 
         Returns:
-            bool: True if successful, False otherwise.
+            dict: Result of the upload operation
         """
-        # This is a simplified implementation
-        # In a real app, you'd need to handle OAuth flow properly
-
         try:
-            # Path to token.json which stores user's access and refresh tokens
-            token_path = 'token.json'
-            # If token.json doesn't exist, we need to authenticate
-            if not os.path.exists(token_path):
-                # In a real app, you'd handle this with proper OAuth flow
-                # For now, we'll just simulate success
-                self.show_info_dialog(
-                    "Google Drive Authorization Needed",
-                    "Please authorize this app to access your Google Drive.\n\n"
-                    "In a complete implementation, you would be redirected to Google's login page."
-                )
-                return False
-
-            # In a real implementation, you would:
-            # 1. Load credentials from token.json
-            # 2. Build the Drive API client
-            # 3. Create a file with the note content
-            # 4. Upload the file to Drive
-
-            # For this example, we'll simulate success
-            return True
-
+            # Create storage context using factory
+            storage = StorageFactory.create_storage('google_drive')
+            
+            # Prepare metadata
+            metadata = {
+                'category': self.category,
+                'title': self.note_text[:30] + ('...' if len(self.note_text) > 30 else '')
+            }
+            
+            # Upload the content
+            result = storage.upload(self.note_text, metadata)
+            return result
+            
         except Exception as e:
-            print(f"Error uploading to Drive: {str(e)}")
-            return False
+            return {
+                'success': False,
+                'message': 'Error in upload process',
+                'error': str(e)
+            }
+        
+    def show_drive_success_dialog(self, web_link):
+        """
+        Show a success dialog with a link to the Google Drive file.
+        """
+        success_dialog = ft.AlertDialog(
+            title=ft.Text("Upload Successful"),
+            content=ft.Column([
+                ft.Text("Your note has been uploaded to Google Drive successfully!"),
+                ft.Container(height=10),  # Spacer
+                ft.ElevatedButton(
+                    "Open in Google Drive",
+                    icon=ft.icons.OPEN_IN_NEW,
+                    on_click=lambda _: webbrowser.open(web_link)
+                )
+            ]),
+            actions=[
+                ft.TextButton("Close", on_click=lambda _: self.close_dialog(success_dialog)),
+            ],
+        )
+        self.page.open(success_dialog)
+        self.page.update()
 
     def show_info_dialog(self, title, message):
         """
@@ -310,7 +331,8 @@ class Note(ft.Container):
         )
 
         #add dialog to page
-        self.page.open(ft.SnackBar(ft.Text(f"Sending to X")))
+        self.page.open(dialog)
+        self.page.update()
 
     
     def close_dialog(self,dialog):
