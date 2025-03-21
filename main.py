@@ -11,7 +11,7 @@ class FirebaseClient:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(FirebaseClient, cls).__new__(cls)
-            cred = credentials.Certificate(r"CSC2218-Group-4-Project-2025\serviceAccountKey.json")
+            cred = credentials.Certificate(r"evonote-500cc-firebase-adminsdk-fbsvc-e7719c214b.json")
             cls._instance.app = firebase_admin.initialize_app(cred)
             cls._instance.logger = Logger(__name__).get_logger()
         return cls._instance
@@ -200,8 +200,7 @@ class AppController:
     
     def navigate_to_notes(self, user_id):
         from n0tes3 import NotesApp
-        self.page.views.clear()
-        self.page.views.append(NotesApp(page=self.page, userId=user_id))
+        self.page.add(NotesApp(page=self.page, userId=user_id))
         self.page.update()
     
     def show_login_view(self):
