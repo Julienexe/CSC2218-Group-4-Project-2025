@@ -1,7 +1,7 @@
 # application/account_creation_service.py
 from uuid import uuid4
 from datetime import datetime
-from domain.account import Account
+from domain_layer import Account
 
 class AccountCreationService:
     def __init__(self, account_repository):
@@ -34,7 +34,7 @@ class AccountCreationService:
 # application/transaction_service.py
 from uuid import uuid4
 from datetime import datetime
-from domain.transaction import Transaction
+from domain_layer import Transaction
 
 class TransactionService:
     def __init__(self, account_repository, transaction_repository):
