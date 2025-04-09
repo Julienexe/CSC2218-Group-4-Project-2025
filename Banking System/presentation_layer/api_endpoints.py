@@ -6,10 +6,8 @@ from enum import Enum
 import uvicorn
 
 # Import your services and repositories
-from application.account_creation_service import AccountCreationService
-from application.transaction_service import TransactionService
-from infrastructure.account_repository import AccountRepository
-from infrastructure.transaction_repository import TransactionRepository
+from application_layer import AccountCreationService, TransactionService
+from infrastructure_layer import AccountRepository, TransactionRepository
 
 # Initialize repositories
 account_repository = AccountRepository()
