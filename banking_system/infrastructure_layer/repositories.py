@@ -12,8 +12,8 @@ class AccountRepository:
         Store a new account in the repository.
         Returns the account ID.
         """
-        self.accounts[account.accountId] = account
-        return account.accountId
+        self.accounts[account.account_id] = account
+        return account.account_id
     
     def get_account_by_id(self, account_id):
         """
@@ -26,10 +26,10 @@ class AccountRepository:
         """
         Update an existing account in the repository.
         """
-        if account.accountId not in self.accounts:
-            raise ValueError(f"Account with ID {account.accountId} not found")
+        if account.account_id not in self.accounts:
+            raise ValueError(f"Account with ID {account.account_id} not found")
         
-        self.accounts[account.accountId] = account
+        self.accounts[account.account_id] = account
 
 # infrastructure/transaction_repository.py
 class TransactionRepository:
@@ -49,10 +49,10 @@ class TransactionRepository:
         self.transactions[transaction.transactionId] = transaction
         
         # Maintain a list of transactions for each account
-        if transaction.accountId not in self.account_transactions:
-            self.account_transactions[transaction.accountId] = []
+        if transaction.account_id not in self.account_transactions:
+            self.account_transactions[transaction.account_id] = []
         
-        self.account_transactions[transaction.accountId].append(transaction)
+        self.account_transactions[transaction.account_id].append(transaction)
         
         return transaction.transactionId
     

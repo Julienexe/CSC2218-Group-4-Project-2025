@@ -2,6 +2,7 @@
 from uuid import uuid4
 from datetime import datetime
 from banking_system.domain_layer import Account,Transaction
+from banking_system.domain_layer.entities.account import CheckingAccount,SavingsAccount
 
 class AccountCreationService:
     def __init__(self, account_repository):
@@ -16,20 +17,29 @@ class AccountCreationService:
         if account_type == "SAVINGS" and initial_deposit < 100.0:
             raise ValueError("Savings accounts require a minimum initial deposit of $100.00")
         
-        # Create a new account
-        account_id = str(uuid4())
-        account = Account(
-            accountId=account_id,
-            accountType=account_type,
-            balance=initial_deposit,
-            status="ACTIVE",
-            creationDate=datetime.now()
-        )
+        
+        # Create a concrete account instance based on the account type
+        if account_type == "CHECKING":
+            account = CheckingAccount(
+                
+                account_type=account_type,
+                initial_balance=initial_deposit,
+               
+            )
+        elif account_type == "SAVINGS":
+            account = SavingsAccount(
+                
+                account_type=account_type,
+                initial_balance=initial_deposit,
+               
+            )
+        else:
+            raise ValueError(f"Unsupported account type: {account_type}")
         
         # Save the account
         self.account_repository.create_account(account)
         
-        return account_id
+        return account.account_id
 
 
 class TransactionService:
@@ -60,7 +70,7 @@ class TransactionService:
             transactionType="DEPOSIT",
             amount=amount,
             timestamp=datetime.now(),
-            accountId=account_id
+            account_id=account_id
         )
         
         self.transaction_repository.save_transaction(transaction)
@@ -94,7 +104,7 @@ class TransactionService:
             transactionType="WITHDRAW",
             amount=amount,
             timestamp=datetime.now(),
-            accountId=account_id
+            account_id=account_id
         )
         
         self.transaction_repository.save_transaction(transaction)
