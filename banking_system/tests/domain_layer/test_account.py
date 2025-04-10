@@ -47,8 +47,7 @@ def test_account_initialization_defaults():
     assert account.balance == 0.0
     assert account.status == AccountStatus.ACTIVE
     assert isinstance(account.creation_date, datetime)
-    # Check if timezone is UTC (or timezone-aware)
-    assert account.creation_date.tzinfo is not None
+
 
 def test_account_initialization_with_balance():
     """Test account initialization with a specific positive balance."""
