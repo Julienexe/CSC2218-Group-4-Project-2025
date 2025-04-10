@@ -8,14 +8,20 @@ __version__ = "1.0.0"
 __author__ = "CSC2218 Group-4-Project-2025"
 
 # Import key classes/functions to simplify external imports
+from banking_system.domain_layer.entities.account import (
+    Account,
+)
+
+from banking_system.domain_layer.entities.transaction import (
+    Transaction,
+    TransactionType
+)
+
 from banking_system.application_layer.services import (
     AccountCreationService,
     TransactionService
 )
-from banking_system.domain_layer.models import (
-    Account,
-    Transaction
-)
+
 from banking_system.infrastructure_layer.repositories import (
     AccountRepository,
     TransactionRepository

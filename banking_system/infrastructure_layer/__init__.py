@@ -1,1 +1,3 @@
-from banking_system.infrastructure_layer.repositories import AccountRepository, TransactionRepository
+
+from .account_repository import AccountRepository
+from .transaction_repository import TransactionRepository

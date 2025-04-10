@@ -1,5 +1,5 @@
 # infrastructure/account_repository.py
-from domain_layer import Account
+from banking_system.domain_layer import Account
 
 from typing import Dict, Optional
 # Import your Account class from the domain layer, e.g.:

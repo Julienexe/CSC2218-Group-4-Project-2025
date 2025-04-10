@@ -1,1 +1,2 @@
-from banking_system.domain_layer.models import Transaction, Account
+from .entities.account import Account
+from .entities.transaction import Transaction
