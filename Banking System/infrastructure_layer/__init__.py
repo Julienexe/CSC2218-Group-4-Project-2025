@@ -1,1 +1,3 @@
-from infrastructure_layer.repositories import AccountRepository, TransactionRepository
+
+from infrastructure_layer.account_repository import AccountRepository
+from infrastructure_layer.transaction_repository import TransactionRepository
