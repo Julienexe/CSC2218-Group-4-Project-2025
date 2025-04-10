@@ -24,7 +24,7 @@ def test_transaction_initialization_deposit():
     )
 
     assert isinstance(transaction.transaction_id, str)
-    assert len(uuid.UUID(transaction.transaction_id)) == 32 # Check if it's a valid UUID string
+    assert len(str(uuid.UUID(transaction.transaction_id))) == 32 # Check if it's a valid UUID string
     assert transaction.transaction_type == TransactionType.DEPOSIT
     assert transaction.amount == amount
     assert transaction.account_id == account_id
@@ -43,7 +43,7 @@ def test_transaction_initialization_withdraw():
     )
 
     assert isinstance(transaction.transaction_id, str)
-    assert len(uuid.UUID(transaction.transaction_id)) == 32
+    assert len(str(uuid.UUID(transaction.transaction_id))) == 36
     assert transaction.transaction_type == TransactionType.WITHDRAW
     assert transaction.amount == amount
     assert transaction.account_id == account_id

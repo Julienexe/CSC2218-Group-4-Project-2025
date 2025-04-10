@@ -54,7 +54,7 @@ class Account(ABC):
         self.account_type = account_type
         self.balance = initial_balance
         self.status = AccountStatus.ACTIVE
-        self.creation_date = datetime.now(datetime.UTC)
+        self.creation_date = datetime.now()
 
     @abstractmethod
     def withdraw(self, amount: float):

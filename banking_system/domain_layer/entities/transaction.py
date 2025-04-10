@@ -34,7 +34,7 @@ class Transaction:
         self.transaction_id = str(uuid.uuid4())
         self.transaction_type = transaction_type
         self.amount = amount
-        self.timestamp = datetime.now(datetime.UTC)
+        self.timestamp = datetime.now()
         self.account_id = account_id
 
     def is_deposit(self) -> bool:

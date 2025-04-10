@@ -25,15 +25,16 @@ from domain_layer.entities.account import (
 
 # --- Fixtures ---
 
+
 @pytest.fixture
 def savings_account() -> SavingsAccount:
     """Fixture to create a default SavingsAccount for testing."""
-    return SavingsAccount(initial_balance=500.0)
+    return SavingsAccount(account_type=AccountType.SAVINGS,initial_balance=500.0)
 
 @pytest.fixture
 def checking_account() -> CheckingAccount:
     """Fixture to create a default CheckingAccount for testing."""
-    return CheckingAccount(initial_balance=300.0)
+    return CheckingAccount(account_type=AccountType.CHECKING,initial_balance=300.0)
 
 # --- Test Account Initialization ---
 
@@ -41,7 +42,7 @@ def test_account_initialization_defaults():
     """Test basic account initialization with default balance."""
     account = CheckingAccount(account_type=AccountType.CHECKING) # Use concrete class
     assert isinstance(account.account_id, str)
-    assert len(uuid.UUID(account.account_id)) == 32 # Check if it's a valid UUID string
+    assert len(str(uuid.UUID(account.account_id))) == 36 # Check if it's a valid UUID string
     assert account.account_type == AccountType.CHECKING
     assert account.balance == 0.0
     assert account.status == AccountStatus.ACTIVE
