@@ -4,11 +4,11 @@ from dataclasses import dataclass
 
 @dataclass
 class Account:
-    accountId: str
-    accountType: str  # "CHECKING" or "SAVINGS"
+    account_id: str
+    account_type: str  # "CHECKING" or "SAVINGS"
     balance: float
     status: str  # "ACTIVE" or "CLOSED"
-    creationDate: datetime
+    creation_date: datetime
 
 # domain/transaction.py
 from datetime import datetime
@@ -20,4 +20,4 @@ class Transaction:
     transactionType: str  # "DEPOSIT" or "WITHDRAW"
     amount: float
     timestamp: datetime
-    accountId: str
+    account_id: str
