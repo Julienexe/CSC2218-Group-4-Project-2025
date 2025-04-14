@@ -1,11 +1,12 @@
-# application/account_creation_service.py
+# banking_system/application_layer/account_creation_service.py
 from uuid import uuid4
 from datetime import datetime
-from banking_system.domain_layer import Account,Transaction
-from banking_system.domain_layer.entities.account import CheckingAccount,SavingsAccount
+from banking_system.domain_layer import Account, Transaction
+from banking_system.domain_layer.entities.account import CheckingAccount, SavingsAccount
+from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
 
-class AccountCreationService:
-    def __init__(self, account_repository):
+class AccountService:
+    def __init__(self, account_repository: AccountRepositoryInterface):
         self.account_repository = account_repository
     
     def create_account(self, account_type, initial_deposit=0.0):
@@ -17,33 +18,30 @@ class AccountCreationService:
         if account_type == "SAVINGS" and initial_deposit < 100.0:
             raise ValueError("Savings accounts require a minimum initial deposit of $100.00")
         
-        
         # Create a concrete account instance based on the account type
         if account_type == "CHECKING":
             account = CheckingAccount(
-                
                 account_type=account_type,
                 initial_balance=initial_deposit,
-               
             )
         elif account_type == "SAVINGS":
             account = SavingsAccount(
-                
                 account_type=account_type,
                 initial_balance=initial_deposit,
-               
             )
         else:
             raise ValueError(f"Unsupported account type: {account_type}")
         
-        # Save the account
+        # Save the account using the repository interface
         self.account_repository.create_account(account)
         
         return account.account_id
 
 
 class TransactionService:
-    def __init__(self, account_repository, transaction_repository):
+    def __init__(self, 
+                 account_repository: AccountRepositoryInterface, 
+                 transaction_repository: TransactionRepositoryInterface):
         self.account_repository = account_repository
         self.transaction_repository = transaction_repository
     
@@ -55,7 +53,7 @@ class TransactionService:
         if amount <= 0:
             raise ValueError("Deposit amount must be positive")
         
-        # Get the account
+        # Get the account using the repository interface
         account = self.account_repository.get_account_by_id(account_id)
         if not account:
             raise ValueError(f"Account with ID {account_id} not found")
@@ -64,7 +62,7 @@ class TransactionService:
         account.balance += amount
         self.account_repository.update_account(account)
         
-        # Create and save the transaction
+        # Create and save the transaction using the repository interface
         transaction = Transaction(
             transactionId=str(uuid4()),
             transactionType="DEPOSIT",
@@ -85,7 +83,7 @@ class TransactionService:
         if amount <= 0:
             raise ValueError("Withdrawal amount must be positive")
         
-        # Get the account
+        # Get the account using the repository interface
         account = self.account_repository.get_account_by_id(account_id)
         if not account:
             raise ValueError(f"Account with ID {account_id} not found")
@@ -98,7 +96,7 @@ class TransactionService:
         account.balance -= amount
         self.account_repository.update_account(account)
         
-        # Create and save the transaction
+        # Create and save the transaction using the repository interface
         transaction = Transaction(
             transactionId=str(uuid4()),
             transactionType="WITHDRAW",
