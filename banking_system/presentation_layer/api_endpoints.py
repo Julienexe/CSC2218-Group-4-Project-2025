@@ -9,17 +9,12 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Fix the imports to use relative imports from parent packages
-from banking_system.application_layer.services import AccountCreationService, TransactionService
+# Import application services and repository interfaces
+from banking_system.application_layer.services import AccountService, TransactionService
+from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
+
+# Import concrete repository implementations
 from banking_system.infrastructure_layer.repositories import AccountRepository, TransactionRepository
-
-# Initialize repositories
-account_repository = AccountRepository()
-transaction_repository = TransactionRepository()
-
-# Initialize services
-account_service = AccountCreationService(account_repository)
-transaction_service = TransactionService(account_repository, transaction_repository)
 
 app = FastAPI(title="Banking Application API")
 
@@ -56,17 +51,33 @@ class TransactionResponse(BaseModel):
     timestamp: str
     account_id: str
 
-# Service Dependencies
-def get_account_service():
-    return account_service
+# FastAPI dependency injection system for repositories and services
+def get_account_repository() -> AccountRepositoryInterface:
+    """Provides an instance of the account repository."""
+    return AccountRepository()
 
-def get_transaction_service():
-    return transaction_service
+def get_transaction_repository() -> TransactionRepositoryInterface:
+    """Provides an instance of the transaction repository."""
+    return TransactionRepository()
+
+def get_account_service(
+    account_repo: AccountRepositoryInterface = Depends(get_account_repository)
+) -> AccountService:
+    """Provides an instance of the account service with its dependencies."""
+    return AccountService(account_repo)
+
+def get_transaction_service(
+    account_repo: AccountRepositoryInterface = Depends(get_account_repository),
+    transaction_repo: TransactionRepositoryInterface = Depends(get_transaction_repository)
+) -> TransactionService:
+    """Provides an instance of the transaction service with its dependencies."""
+    return TransactionService(account_repo, transaction_repo)
 
 @app.post("/accounts", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
 async def create_account(
     request: CreateAccountRequest, 
-    service: AccountCreationService = Depends(get_account_service)
+    account_service: AccountService = Depends(get_account_service),
+    account_repo: AccountRepositoryInterface = Depends(get_account_repository)
 ):
     """
     Create a new account with the specified type and optional initial deposit.
@@ -75,8 +86,8 @@ async def create_account(
         # Log incoming request for debugging
         logger.info(f"Creating account: {request.dict()}")
         
-        account_id = service.create_account(request.account_type.value, request.initialDeposit)
-        account = account_repository.get_account_by_id(account_id)
+        account_id = account_service.create_account(request.account_type.value, request.initialDeposit)
+        account = account_repo.get_account_by_id(account_id)
         
         logger.info(f"Account created with ID: {account_id}")
         
@@ -100,14 +111,14 @@ async def create_account(
 async def deposit_funds(
     account_id: str,
     request: DepositRequest,
-    service: TransactionService = Depends(get_transaction_service)
+    transaction_service: TransactionService = Depends(get_transaction_service)
 ):
     """
     Deposit funds into the specified account.
     """
     try:
         logger.info(f"Depositing {request.amount} to account {account_id}")
-        transaction = service.deposit(account_id, request.amount)
+        transaction = transaction_service.deposit(account_id, request.amount)
         return TransactionResponse(
             transactionId=transaction.transactionId,
             transactionType=transaction.transactionType,
@@ -127,14 +138,14 @@ async def deposit_funds(
 async def withdraw_funds(
     account_id: str,
     request: WithdrawRequest,
-    service: TransactionService = Depends(get_transaction_service)
+    transaction_service: TransactionService = Depends(get_transaction_service)
 ):
     """
     Withdraw funds from the specified account.
     """
     try:
         logger.info(f"Withdrawing {request.amount} from account {account_id}")
-        transaction = service.withdraw(account_id, request.amount)
+        transaction = transaction_service.withdraw(account_id, request.amount)
         return TransactionResponse(
             transactionId=transaction.transactionId,
             transactionType=transaction.transactionType,
@@ -151,13 +162,16 @@ async def withdraw_funds(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/accounts/{account_id}/balance", response_model=BalanceResponse)
-async def get_balance(account_id: str):
+async def get_balance(
+    account_id: str,
+    account_repo: AccountRepositoryInterface = Depends(get_account_repository)
+):
     """
     Get the current balance of the specified account.
     """
     try:
         logger.info(f"Getting balance for account {account_id}")
-        account = account_repository.get_account_by_id(account_id)
+        account = account_repo.get_account_by_id(account_id)
         if not account:
             raise HTTPException(status_code=404, detail="Account not found")
         
@@ -175,13 +189,16 @@ async def get_balance(account_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/accounts/{account_id}/transactions", response_model=List[TransactionResponse])
-async def get_transaction_history(account_id: str):
+async def get_transaction_history(
+    account_id: str,
+    transaction_repo: TransactionRepositoryInterface = Depends(get_transaction_repository)
+):
     """
     Get the transaction history for the specified account.
     """
     try:
         logger.info(f"Getting transactions for account {account_id}")
-        transactions = transaction_repository.get_transactions_for_account(account_id)
+        transactions = transaction_repo.get_transactions_by_account_id(account_id)
         
         return [
             TransactionResponse(
