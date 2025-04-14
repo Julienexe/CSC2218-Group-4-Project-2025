@@ -18,7 +18,7 @@ from banking_system.domain_layer.entities.transaction import (
 )
 
 from banking_system.application_layer.services import (
-    AccountCreationService,
+    AccountService,
     TransactionService
 )
 
@@ -29,7 +29,7 @@ from banking_system.infrastructure_layer.repositories import (
 
 # Define what gets imported with `from banking_system import *`
 __all__ = [
-    "AccountCreateService",
+    "AccountService",
     "TransactionService",
     "Account",
     "Transaction",
