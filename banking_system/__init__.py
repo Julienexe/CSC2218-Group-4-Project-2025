@@ -8,7 +8,7 @@ __version__ = "1.0.0"
 __author__ = "CSC2218 Group-4-Project-2025"
 
 # Import key classes/functions to simplify external imports
-from banking_system.domain_layer.entities.account import (
+from banking_system.domain_layer.entities.bank_accounts.account import (
     Account,
 )
 
