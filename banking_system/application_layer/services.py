@@ -5,7 +5,6 @@ from banking_system.domain_layer import Transaction
 from banking_system.domain_layer.entities.bank_accounts.checking_account import CheckingAccount
 from banking_system.domain_layer.entities.bank_accounts.savings_account import SavingsAccount
 from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
-from banking_system.application_layer.services import NotificationService, LoggingService
 
 class AccountService:
     def __init__(self, account_repository: AccountRepositoryInterface):
@@ -38,90 +37,6 @@ class AccountService:
         self.account_repository.create_account(account)
         
         return account.account_id
-
-
-class TransactionService:
-    def __init__(self, 
-                 account_repository: AccountRepositoryInterface, 
-                 transaction_repository: TransactionRepositoryInterface,
-                 notification_service: NotificationService,
-                 logging_service: LoggingService):
-        self.account_repository = account_repository
-        self.transaction_repository = transaction_repository
-        self.notification_service = notification_service
-        self.logging_service = logging_service
-
-    def deposit(self, account_id, amount):
-        """
-        Deposits the specified amount into the account.
-        Returns a Transaction object representing the deposit.
-        """
-        if amount <= 0:
-            raise ValueError("Deposit amount must be positive")
-
-        # Get the account using the repository interface
-        account = self.account_repository.get_account_by_id(account_id)
-        if not account:
-            raise ValueError(f"Account with ID {account_id} not found")
-
-        # Update the account balance
-        account.balance += amount
-        self.account_repository.update_account(account)
-
-        # Create and save the transaction using the repository interface
-        transaction = Transaction(
-            transactionId=str(uuid4()),
-            transactionType="DEPOSIT",
-            amount=amount,
-            timestamp=datetime.now(),
-            account_id=account_id
-        )
-
-        self.transaction_repository.save_transaction(transaction)
-
-        # Notify and log the transaction
-        self.notification_service.notify(transaction)
-        self.logging_service.log_transaction(transaction)
-
-        return transaction
-
-    def withdraw(self, account_id, amount):
-        """
-        Withdraws the specified amount from the account if sufficient funds are available.
-        Returns a Transaction object representing the withdrawal.
-        """
-        if amount <= 0:
-            raise ValueError("Withdrawal amount must be positive")
-
-        # Get the account using the repository interface
-        account = self.account_repository.get_account_by_id(account_id)
-        if not account:
-            raise ValueError(f"Account with ID {account_id} not found")
-
-        # Check for sufficient funds
-        if account.balance < amount:
-            raise ValueError("Insufficient funds")
-
-        # Update the account balance
-        account.balance -= amount
-        self.account_repository.update_account(account)
-
-        # Create and save the transaction using the repository interface
-        transaction = Transaction(
-            transactionId=str(uuid4()),
-            transactionType="WITHDRAW",
-            amount=amount,
-            timestamp=datetime.now(),
-            account_id=account_id
-        )
-
-        self.transaction_repository.save_transaction(transaction)
-
-        # Notify and log the transaction
-        self.notification_service.notify(transaction)
-        self.logging_service.log_transaction(transaction)
-
-        return transaction
 
 
 class FundTransferService:
@@ -221,3 +136,87 @@ class LoggingService:
             f"Account ID: {transaction.account_id}\n"
         )
         self.log(log_message)
+
+
+class TransactionService:
+    def __init__(self, 
+                 account_repository: AccountRepositoryInterface, 
+                 transaction_repository: TransactionRepositoryInterface,
+                 notification_service: NotificationService,
+                 logging_service: LoggingService):
+        self.account_repository = account_repository
+        self.transaction_repository = transaction_repository
+        self.notification_service = notification_service
+        self.logging_service = logging_service
+
+    def deposit(self, account_id, amount):
+        """
+        Deposits the specified amount into the account.
+        Returns a Transaction object representing the deposit.
+        """
+        if amount <= 0:
+            raise ValueError("Deposit amount must be positive")
+
+        # Get the account using the repository interface
+        account = self.account_repository.get_account_by_id(account_id)
+        if not account:
+            raise ValueError(f"Account with ID {account_id} not found")
+
+        # Update the account balance
+        account.balance += amount
+        self.account_repository.update_account(account)
+
+        # Create and save the transaction using the repository interface
+        transaction = Transaction(
+            transactionId=str(uuid4()),
+            transactionType="DEPOSIT",
+            amount=amount,
+            timestamp=datetime.now(),
+            account_id=account_id
+        )
+
+        self.transaction_repository.save_transaction(transaction)
+
+        # Notify and log the transaction
+        self.notification_service.notify(transaction)
+        self.logging_service.log_transaction(transaction)
+
+        return transaction
+
+    def withdraw(self, account_id, amount):
+        """
+        Withdraws the specified amount from the account if sufficient funds are available.
+        Returns a Transaction object representing the withdrawal.
+        """
+        if amount <= 0:
+            raise ValueError("Withdrawal amount must be positive")
+
+        # Get the account using the repository interface
+        account = self.account_repository.get_account_by_id(account_id)
+        if not account:
+            raise ValueError(f"Account with ID {account_id} not found")
+
+        # Check for sufficient funds
+        if account.balance < amount:
+            raise ValueError("Insufficient funds")
+
+        # Update the account balance
+        account.balance -= amount
+        self.account_repository.update_account(account)
+
+        # Create and save the transaction using the repository interface
+        transaction = Transaction(
+            transactionId=str(uuid4()),
+            transactionType="WITHDRAW",
+            amount=amount,
+            timestamp=datetime.now(),
+            account_id=account_id
+        )
+
+        self.transaction_repository.save_transaction(transaction)
+
+        # Notify and log the transaction
+        self.notification_service.notify(transaction)
+        self.logging_service.log_transaction(transaction)
+
+        return transaction
