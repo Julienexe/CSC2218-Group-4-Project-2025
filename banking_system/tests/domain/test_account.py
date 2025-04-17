@@ -1,4 +1,4 @@
-# tests/domain/test_account.py
+
 
 import pytest
 import sys
@@ -8,22 +8,11 @@ import uuid
 from enum import Enum
 
 # Add the root directory of the project to the Python path
-sys.path.append(str(Path(__file__).resolve().parents[2]))
-#import packages using relative path
-from domain_layer.entities.account import Account, SavingsAccount, CheckingAccount, AccountType
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+from banking_system.domain_layer.entities.bank_accounts.account import AccountStatus, AccountType
+from banking_system.domain_layer.entities.bank_accounts.savings_account import SavingsAccount
+from banking_system.domain_layer.entities.bank_accounts.checking_account import CheckingAccount
 
-
-# Assuming your project structure allows this import
-# If not, adjust the path as needed (like you did in other test files)
-from domain_layer.entities.account import (
-    Account,
-    SavingsAccount,
-    CheckingAccount,
-    AccountType,
-    AccountStatus
-)
-
-# --- Fixtures ---
 
 
 @pytest.fixture

@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 import uuid
 from enum import Enum
 
-sys.path.append(str(Path(__file__).resolve().parents[2]))
-from domain_layer.entities.transaction import Transaction, TransactionType
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+from banking_system.domain_layer.entities.transaction import Transaction, TransactionType
 
 
 # --- Test Transaction Initialization ---
