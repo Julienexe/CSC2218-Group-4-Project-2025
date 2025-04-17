@@ -1,5 +1,5 @@
 # Example of specialized behavior
-from banking_system import Account
+from banking_system.domain_layer.entities.bank_accounts.account import Account
 
 
 class SavingsAccount(Account):
