@@ -1,4 +1,5 @@
-from banking_system import Account
+from datetime import datetime
+from banking_system.domain_layer.entities.bank_accounts.account import Account, AccountType
 from banking_system.domain_layer.entities.bank_accounts.account import AccountStatus
 
 
