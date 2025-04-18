@@ -15,6 +15,12 @@ from banking_system.domain_layer.entities.bank_accounts.savings_account import (
     SavingsAccount,
 )
 
+from banking_system.domain_layer.entities.bank_accounts.account import (
+    Account,
+    AccountStatus,
+    AccountType,
+)
+
 from banking_system.domain_layer.entities.transaction import (
     Transaction,
     TransactionType
@@ -32,12 +38,17 @@ from banking_system.infrastructure_layer.repositories import (
 
 # Define what gets imported with `from banking_system import *`
 __all__ = [
+    "CheckingAccount",
+    "SavingsAccount",
+    "Transaction",
+    "TransactionType",
     "AccountService",
     "TransactionService",
-    "Account",
-    "Transaction",
     "AccountRepository",
-    "TransactionRepository"
+    "TransactionRepository",
+    "AccountStatus",
+    "AccountType",
+    "Account",
 ]
 
 # Optional: Initialize package-wide configurations
