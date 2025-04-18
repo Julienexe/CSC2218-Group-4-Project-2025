@@ -14,7 +14,7 @@ from banking_system.application_layer.services import AccountService, Transactio
 from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
 
 # Import concrete repository implementations
-from banking_system.infrastructure_layer.repositories import AccountRepository, TransactionRepository
+from banking_system import AccountRepository, TransactionRepository,DictionaryStrategy
 
 app = FastAPI(title="Banking Application API")
 
@@ -54,7 +54,7 @@ class TransactionResponse(BaseModel):
 # FastAPI dependency injection system for repositories and services
 def get_account_repository() -> AccountRepositoryInterface:
     """Provides an instance of the account repository."""
-    return AccountRepository()
+    return AccountRepository(strategy= DictionaryStrategy())
 
 def get_transaction_repository() -> TransactionRepositoryInterface:
     """Provides an instance of the transaction repository."""
