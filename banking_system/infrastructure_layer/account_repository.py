@@ -1,17 +1,16 @@
 # infrastructure/account_repository.py
-from banking_system import Account
+from banking_system import Account, AccountRepositoryInterface
+from .strategies.strategy import StrategyInterface as Strat
 
-from typing import Dict, Optional
-# Import your Account class from the domain layer, e.g.:
-# from domain.account import Account
+from typing import Optional
 
-class AccountRepository:
-    def __init__(self) -> None:
+
+class AccountRepository(AccountRepositoryInterface):
+    def __init__(self, strategy:Strat) -> None:
         """
-        Initialize an in-memory account storage.
-        In a real implementation, this would connect to a database.
+        Initialize a repository for account operations.
         """
-        self._accounts: Dict[str, 'Account'] = {}
+        self._strategy = strategy
     
     def create_account(self, account: 'Account') -> str:
         """
@@ -23,8 +22,9 @@ class AccountRepository:
         Returns:
             str: The account ID.
         """
-        self._accounts[account.account_id] = account
-        return account.account_id
+        account_id = self._strategy.create_account(account)
+        return account_id
+    
     
     def get_account_by_id(self, account_id: str) -> Optional['Account']:
         """
@@ -36,7 +36,7 @@ class AccountRepository:
         Returns:
             Optional[Account]: The Account object if found, else None.
         """
-        return self._accounts.get(account_id)
+        return self._strategy.get_account_by_id(account_id)
     
     def update_account(self, account: 'Account') -> None:
         """
@@ -48,6 +48,4 @@ class AccountRepository:
         Raises:
             ValueError: If the account does not exist.
         """
-        if account.account_id not in self._accounts:
-            raise ValueError(f"Account with ID {account.account_id} not found")
-        self._accounts[account.account_id] = account
+        self._strategy.update_account(account)
