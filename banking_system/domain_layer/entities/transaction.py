@@ -1,4 +1,4 @@
-# domain/entities/transaction.py
+
 
 from enum import Enum
 import uuid
@@ -28,6 +28,7 @@ class Transaction:
             Returns a string representation of the transaction object.
     """
     def __init__(self, transaction_type: TransactionType, amount: float, account_id: str):
+        #check if the amount is less than zero
         if amount <= 0:
             raise ValueError("Transaction amount must be positive.")
 
