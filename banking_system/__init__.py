@@ -31,6 +31,10 @@ from banking_system.application_layer.services import (
     TransactionService
 )
 
+from banking_system.application_layer.repository_interfaces import(
+    AccountRepositoryInterface,
+)
+
 from banking_system.infrastructure_layer.repositories import (
     AccountRepository,
     TransactionRepository
@@ -49,6 +53,7 @@ __all__ = [
     "AccountStatus",
     "AccountType",
     "Account",
+    "AccountRepositoryInterface"
 ]
 
 # Optional: Initialize package-wide configurations
