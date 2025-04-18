@@ -1,10 +1,13 @@
-
 from enum import Enum
 from abc import ABC, abstractmethod
 from datetime import datetime
 import uuid
 
+from ...util.validators import float_greater_than_zero
+
+
 from ..transaction import Transaction, TransactionType
+
 
 
 class AccountStatus(Enum):
@@ -47,10 +50,10 @@ class Account(ABC):
             Returns a string representation of the account, including its ID, type, 
             balance, status, and creation date.
     """
-    def __init__(self, account_type: AccountType, initial_balance: float = 0.0):
-        if initial_balance < 0:
+    def __init__(self, account_type: AccountType, initial_balance: float = 5.0):
+        # Ensure initial balance is positive
+        if not float_greater_than_zero(initial_balance):
             raise ValueError("Initial balance cannot be negative.")
-
         self.account_id = str(uuid.uuid4())
         self.account_type = account_type
         self.balance = initial_balance

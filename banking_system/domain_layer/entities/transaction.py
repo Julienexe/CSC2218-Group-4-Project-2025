@@ -4,6 +4,8 @@ from enum import Enum
 import uuid
 from datetime import datetime
 
+from ..util.validators import float_greater_than_zero
+
 
 class TransactionType(Enum):
     DEPOSIT = "DEPOSIT"
@@ -29,7 +31,7 @@ class Transaction:
     """
     def __init__(self, transaction_type: TransactionType, amount: float, account_id: str):
         #check if the amount is less than zero
-        if amount <= 0:
+        if not float_greater_than_zero(amount):
             raise ValueError("Transaction amount must be positive.")
 
         self.transaction_id = str(uuid.uuid4())

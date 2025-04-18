@@ -1,9 +1,9 @@
 # banking_system/application_layer/account_creation_service.py
 from uuid import uuid4
 from datetime import datetime
-from banking_system.domain_layer import Transaction
-from banking_system.domain_layer.entities.bank_accounts.checking_account import CheckingAccount
-from banking_system.domain_layer.entities.bank_accounts.savings_account import SavingsAccount
+from banking_system import Transaction
+from banking_system import CheckingAccount
+from banking_system import SavingsAccount
 from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
 
 class AccountService:
