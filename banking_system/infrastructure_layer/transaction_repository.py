@@ -1,5 +1,5 @@
 # infrastructure/transaction_repository.py
-from banking_system.domain_layer import Transaction
+from banking_system import Transaction
 from typing import Dict, List
 # Import your Transaction class from the domain layer, e.g.:
 # from domain.transaction import Transaction

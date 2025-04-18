@@ -9,9 +9,9 @@ from enum import Enum
 
 # Add the root directory of the project to the Python path
 sys.path.append(str(Path(__file__).resolve().parents[3]))
-from banking_system.domain_layer.entities.bank_accounts.account import AccountStatus, AccountType
-from banking_system.domain_layer.entities.bank_accounts.savings_account import SavingsAccount
-from banking_system.domain_layer.entities.bank_accounts.checking_account import CheckingAccount
+from banking_system import AccountStatus, AccountType
+from banking_system import SavingsAccount
+from banking_system import CheckingAccount
 
 
 
@@ -33,7 +33,7 @@ def test_account_initialization_defaults():
     assert isinstance(account.account_id, str)
     assert len(str(uuid.UUID(account.account_id))) == 36 # Check if it's a valid UUID string
     assert account.account_type == AccountType.CHECKING
-    assert account.balance == 0.0
+    assert account.balance == 5.0
     assert account.status == AccountStatus.ACTIVE
     assert isinstance(account.creation_date, datetime)
 

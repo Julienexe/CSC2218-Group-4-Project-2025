@@ -8,7 +8,7 @@ import uuid
 from enum import Enum
 
 sys.path.append(str(Path(__file__).resolve().parents[3]))
-from banking_system.domain_layer.entities.transaction import Transaction, TransactionType
+from banking_system import Transaction, TransactionType
 
 
 # --- Test Transaction Initialization ---
