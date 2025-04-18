@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import uuid
 
+from ..transaction import Transaction, TransactionType
+
 
 class AccountStatus(Enum):
     ACTIVE = "active"
@@ -55,21 +57,41 @@ class Account(ABC):
         self.status = AccountStatus.ACTIVE
         self.creation_date = datetime.now()
 
-    @abstractmethod
+   
     def withdraw(self, amount: float):
         """Withdraw money from the account. Specialized behavior for different account types."""
-        pass
+        if not self.is_active():
+            raise ValueError("Cannot withdraw from a closed account.")
+
+        if amount <= 0:
+            raise ValueError("Withdrawal amount must be positive.")
+
+        if amount > self.balance:
+            raise ValueError("Insufficient funds for withdrawal.")
+        self._validate_before_withdraw(amount)
+
+        self.balance -= amount
+
+        #create a record of the transaction
+        return Transaction(account_id=self.account_id, amount=amount,transaction_type=TransactionType.WITHDRAW)
 
     def deposit(self, amount: float):
         if amount <= 0:
             raise ValueError("Deposit amount must be positive.")
         self.balance += amount
+        #create a record of the transaction
+        return Transaction(account_id=self.account_id, amount=amount,transaction_type=TransactionType.DEPOSIT)
 
     def close_account(self):
         self.status = AccountStatus.CLOSED
 
     def is_active(self) -> bool:
         return self.status == AccountStatus.ACTIVE
+    
+  
+    def _validate_before_withdraw(self, amount: float):
+        """Validate conditions before allowing withdrawal. Specialized behavior for different account types."""
+        pass
 
     def __repr__(self):
         return (
