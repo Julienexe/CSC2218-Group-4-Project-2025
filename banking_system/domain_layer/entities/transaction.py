@@ -30,7 +30,17 @@ class Transaction:
         __repr__() -> str:
             Returns a string representation of the transaction object.
     """
-    def __init__(self, transaction_type: TransactionType, amount: float, account_id: str):
+    def __init__(self, transaction_type: TransactionType, amount: float, account_id: str, destination_account_id: str = None):
+        """
+        Initializes a new transaction.
+        Args:
+            transaction_type (TransactionType): The type of the transaction (e.g., deposit, withdrawal).
+            amount (float): The amount involved in the transaction. Must be a positive value.
+            account_id (str): The identifier of the account associated with the transaction.
+            destination_account_id (str, optional): The identifier of the destination account for transfer transactions.
+        Raises:
+            ValueError: If the transaction amount is not positive.
+        """
         #check if the amount is less than zero
         if not float_greater_than_zero(amount):
             raise ValueError("Transaction amount must be positive.")
@@ -40,7 +50,7 @@ class Transaction:
         self.amount = amount
         self.timestamp = datetime.now()
         self.account_id = account_id
-        self.destination_account_id = None  # For transfer transactions, this will be set later
+        self.destination_account_id = destination_account_id  # For transfer transactions, this will be set later
 
     def is_deposit(self) -> bool:
         return self.transaction_type == TransactionType.DEPOSIT

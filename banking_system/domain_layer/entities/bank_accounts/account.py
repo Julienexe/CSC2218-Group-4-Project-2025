@@ -88,19 +88,11 @@ class Account(ABC):
         """Validate conditions before allowing withdrawal. Specialized behavior for different account types."""
         pass
 
-    def transfer(self, amount: float, destination_account):
+    @validate_transaction("transfer")
+    def transfer(self, amount: float, destination_account) -> Transaction:
         """Transfer money to another account."""
-        if not self.is_active():
-            raise ValueError("Cannot transfer from a closed account.")
-
-        if not destination_account.is_active():
-            raise ValueError("Cannot transfer to a closed account.")
-
-        if amount <= 0:
-            raise ValueError("Transfer amount must be positive.")
-
-        if amount > self.balance:
-            raise ValueError("Insufficient funds for transfer.")
+        if not isinstance(destination_account, Account):
+            raise ValueError("Destination account must be a valid Account instance.")
 
         # Perform the withdrawal and deposit
         self.withdraw(amount)
