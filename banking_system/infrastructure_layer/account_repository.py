@@ -1,16 +1,18 @@
 # infrastructure/account_repository.py
+import threading
 from banking_system import Account, AccountRepositoryInterface
-from .strategies.strategy import StrategyInterface as Strat
+
 
 from typing import Optional
 
 
 class AccountRepository(AccountRepositoryInterface):
-    def __init__(self, strategy:Strat) -> None:
+    def __init__(self, strategy) -> None:
         """
         Initialize a repository for account operations.
         """
         self._strategy = strategy
+        self._lock = threading.RLock()
     
     def create_account(self, account: 'Account') -> str:
         """
@@ -49,3 +51,16 @@ class AccountRepository(AccountRepositoryInterface):
             ValueError: If the account does not exist.
         """
         self._strategy.update_account(account)
+
+    def update_accounts_atomically(self, source_account: Account, destination_account: Account) -> bool:
+        """
+        Updates two accounts atomically as part of a transfer operation.
+        Returns True if both updates succeed, False otherwise.
+        """
+        with self._lock:
+            try:
+                self._strategy.update_account(source_account)
+                self._strategy.update_account(destination_account)
+                return True
+            except Exception:
+                return False
