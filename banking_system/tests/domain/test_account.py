@@ -7,11 +7,10 @@ from datetime import datetime, timezone
 import uuid
 from enum import Enum
 
+
 # Add the root directory of the project to the Python path
 sys.path.append(str(Path(__file__).resolve().parents[3]))
-from banking_system import AccountStatus, AccountType
-from banking_system import SavingsAccount
-from banking_system import CheckingAccount
+from banking_system import AccountStatus, AccountType, SavingsAccount, CheckingAccount, TransactionType
 
 
 
@@ -115,12 +114,12 @@ def test_savings_withdraw_below_minimum(savings_account):
 
 def test_savings_withdraw_negative_amount(savings_account):
     """Test withdrawing a negative amount from SavingsAccount."""
-    with pytest.raises(ValueError, match="Withdrawal amount must be positive."):
+    with pytest.raises(ValueError, match="withdraw amount must be positive."):
         savings_account.withdraw(-50.0)
 
 def test_savings_withdraw_zero_amount(savings_account):
     """Test withdrawing zero amount from SavingsAccount."""
-    with pytest.raises(ValueError, match="Withdrawal amount must be positive."):
+    with pytest.raises(ValueError, match="withdraw amount must be positive."):
         savings_account.withdraw(0.0)
 
 def test_savings_withdraw_from_closed_account(savings_account):
@@ -145,20 +144,20 @@ def test_checking_withdraw_exact_balance(checking_account):
     assert checking_account.balance == 0.0
 
 def test_checking_withdraw_insufficient_funds(checking_account):
-    """Test withdrawal with insufficient funds."""
+    """Test withdraw with insufficient funds."""
     withdraw_amount = checking_account.balance + 1.0
-    with pytest.raises(ValueError, match="Insufficient funds for withdrawal."):
+    with pytest.raises(ValueError, match="Insufficient funds for withdraw."):
         checking_account.withdraw(withdraw_amount)
     assert checking_account.balance == 300.0 # Balance should remain unchanged
 
 def test_checking_withdraw_negative_amount(checking_account):
     """Test withdrawing a negative amount from CheckingAccount."""
-    with pytest.raises(ValueError, match="Withdrawal amount must be positive."):
+    with pytest.raises(ValueError, match="withdraw amount must be positive."):
         checking_account.withdraw(-50.0)
 
 def test_checking_withdraw_zero_amount(checking_account):
     """Test withdrawing zero amount from CheckingAccount."""
-    with pytest.raises(ValueError, match="Withdrawal amount must be positive."):
+    with pytest.raises(ValueError, match="withdraw amount must be positive."):
         checking_account.withdraw(0.0)
 
 def test_checking_withdraw_from_closed_account(checking_account):
@@ -190,3 +189,22 @@ def test_checking_get_creation_date(checking_account):
     assert isinstance(checking_account.get_creation_date(), datetime)
     assert checking_account.get_creation_date() == checking_account.creation_date
 
+
+
+# --- Test account transfers ---
+def test_transfer_success(savings_account, checking_account):
+    """Test successful transfer between accounts."""
+    initial_savings_balance = savings_account.balance
+    initial_checking_balance = checking_account.balance
+    transfer_amount = 100.0
+
+    transaction = savings_account.transfer(transfer_amount, checking_account)
+
+    assert transaction.transaction_type == TransactionType.TRANSFER
+    assert transaction.amount == transfer_amount
+    assert transaction.account_id == savings_account.account_id
+    assert transaction.destination_account_id == checking_account.account_id
+
+    assert savings_account.balance == initial_savings_balance - transfer_amount
+    assert checking_account.balance == initial_checking_balance + transfer_amount
+    assert transaction.timestamp <= datetime.now()  # Check if the timestamp is in the past
