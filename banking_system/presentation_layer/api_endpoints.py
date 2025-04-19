@@ -18,8 +18,8 @@ from banking_system import AccountRepository, TransactionRepository,DictionarySt
 # Import Week 2 additional services and repositories
 from banking_system.application_layer.services import FundTransferService, NotificationService
 from banking_system.application_layer.repository_interfaces import LoggingRepositoryInterface
-from banking_system import AccountRepository, TransactionRepository
-#from banking_system.infrastructure_layer.adapters import NotificationAdapter
+from banking_system import AccountRepository, TransactionRepository, LoggingRepository
+from banking_system.infrastructure_layer.adapters import NotificationAdapter
 
 app = FastAPI(title="Banking Application API")
 
@@ -104,9 +104,9 @@ def get_logging_repository() -> LoggingRepositoryInterface:
     """Provides an instance of the logging repository."""
     return LoggingRepository()
 
-# def get_notification_adapter() -> NotificationAdapter:
-#     """Provides an instance of the notification adapter."""
-#     return NotificationAdapter()
+def get_notification_adapter() -> NotificationAdapter:
+    """Provides an instance of the notification adapter."""
+    return NotificationAdapter()
 
 def get_account_service(
     account_repo: AccountRepositoryInterface = Depends(get_account_repository)
@@ -129,11 +129,11 @@ def get_fund_transfer_service(
     """Provides an instance of the fund transfer service with its dependencies."""
     return FundTransferService(account_repo, transaction_repo)
 
-# def get_notification_service(
-#     notification_adapter: NotificationAdapter = Depends(get_notification_adapter)
-# ) -> NotificationService:
-#     """Provides an instance of the notification service with its dependencies."""
-#     return NotificationService(notification_adapter)
+def get_notification_service(
+    notification_adapter: NotificationAdapter = Depends(get_notification_adapter)
+) -> NotificationService:
+    """Provides an instance of the notification service with its dependencies."""
+    return NotificationService(notification_adapter)
 
 @app.post("/accounts", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
 async def create_account(
@@ -311,108 +311,108 @@ async def transfer_funds(
         logger.exception(f"Error transferring funds: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# @app.post("/notifications/subscribe", response_model=NotificationResponse)
-# async def subscribe_to_notifications(
-#     request: NotificationRequest,
-#     notification_service: NotificationService = Depends(get_notification_service)
-# ):
-#     """
-#     Subscribe to notifications for a specific account.
-#     """
-#     try:
-#         logger.info(f"Subscribing to {request.notifyType} notifications for account {request.accountId}")
-#         subscription = notification_service.subscribe(request.accountId, request.notifyType)
+@app.post("/notifications/subscribe", response_model=NotificationResponse)
+async def subscribe_to_notifications(
+    request: NotificationRequest,
+    notification_service: NotificationService = Depends(get_notification_service)
+):
+    """
+    Subscribe to notifications for a specific account.
+    """
+    try:
+        logger.info(f"Subscribing to {request.notifyType} notifications for account {request.accountId}")
+        subscription = notification_service.subscribe(request.accountId, request.notifyType)
         
-#         return NotificationResponse(
-#             accountId=request.accountId,
-#             notifyType=request.notifyType,
-#             status="subscribed"
-#         )
-#     except ValueError as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-#     except KeyError:
-#         raise HTTPException(status_code=404, detail=f"Account {request.accountId} not found")
-#     except Exception as e:
-#         logger.exception(f"Error subscribing to notifications: {str(e)}")
-#         raise HTTPException(status_code=500, detail=str(e))
+        return NotificationResponse(
+            accountId=request.accountId,
+            notifyType=request.notifyType,
+            status="subscribed"
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Account {request.accountId} not found")
+    except Exception as e:
+        logger.exception(f"Error subscribing to notifications: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# @app.post("/notifications/unsubscribe", response_model=NotificationResponse)
-# async def unsubscribe_from_notifications(
-#     request: NotificationRequest,
-#     notification_service: NotificationService = Depends(get_notification_service)
-# ):
-#     """
-#     Unsubscribe from notifications for a specific account.
-#     """
-#     try:
-#         logger.info(f"Unsubscribing from {request.notifyType} notifications for account {request.accountId}")
-#         notification_service.unsubscribe(request.accountId, request.notifyType)
+@app.post("/notifications/unsubscribe", response_model=NotificationResponse)
+async def unsubscribe_from_notifications(
+    request: NotificationRequest,
+    notification_service: NotificationService = Depends(get_notification_service)
+):
+    """
+    Unsubscribe from notifications for a specific account.
+    """
+    try:
+        logger.info(f"Unsubscribing from {request.notifyType} notifications for account {request.accountId}")
+        notification_service.unsubscribe(request.accountId, request.notifyType)
         
-#         return NotificationResponse(
-#             accountId=request.accountId,
-#             notifyType=request.notifyType,
-#             status="unsubscribed"
-#         )
-#     except ValueError as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-#     except KeyError:
-#         raise HTTPException(status_code=404, detail=f"Account {request.accountId} not found")
-#     except Exception as e:
-#         logger.exception(f"Error unsubscribing from notifications: {str(e)}")
-#         raise HTTPException(status_code=500, detail=str(e))
+        return NotificationResponse(
+            accountId=request.accountId,
+            notifyType=request.notifyType,
+            status="unsubscribed"
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Account {request.accountId} not found")
+    except Exception as e:
+        logger.exception(f"Error unsubscribing from notifications: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# @app.get("/logs/transactions", response_model=List[LogEntry])
-# async def get_transaction_logs(
-#     logging_repo: LoggingRepositoryInterface = Depends(get_logging_repository)
-# ):
-#     """
-#     Retrieve the transaction logs (primarily for administrative purposes).
-#     """
-#     try:
-#         logger.info("Retrieving transaction logs")
-#         logs = logging_repo.get_transaction_logs()
+@app.get("/logs/transactions", response_model=List[LogEntry])
+async def get_transaction_logs(
+    logging_repo: LoggingRepositoryInterface = Depends(get_logging_repository)
+):
+    """
+    Retrieve the transaction logs (primarily for administrative purposes).
+    """
+    try:
+        logger.info("Retrieving transaction logs")
+        logs = logging_repo.get_transaction_logs()
         
-#         return [
-#             LogEntry(
-#                 logId=log.log_id,
-#                 timestamp=log.timestamp.isoformat(),
-#                 level=log.level,
-#                 message=log.message,
-#                 transactionId=log.transaction_id,
-#                 accountId=log.account_id
-#             ) for log in logs
-#         ]
-#     except Exception as e:
-#         logger.exception(f"Error retrieving transaction logs: {str(e)}")
-#         raise HTTPException(status_code=500, detail=str(e))
+        return [
+            LogEntry(
+                logId=log.log_id,
+                timestamp=log.timestamp.isoformat(),
+                level=log.level,
+                message=log.message,
+                transactionId=log.transaction_id,
+                accountId=log.account_id
+            ) for log in logs
+        ]
+    except Exception as e:
+        logger.exception(f"Error retrieving transaction logs: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# @app.get("/accounts/{account_id}/logs", response_model=List[LogEntry])
-# async def get_account_logs(
-#     account_id: str,
-#     logging_repo: LoggingRepositoryInterface = Depends(get_logging_repository)
-# ):
-#     """
-#     Retrieve logs for a specific account.
-#     """
-#     try:
-#         logger.info(f"Retrieving logs for account {account_id}")
-#         logs = logging_repo.get_logs_by_account_id(account_id)
+@app.get("/accounts/{account_id}/logs", response_model=List[LogEntry])
+async def get_account_logs(
+    account_id: str,
+    logging_repo: LoggingRepositoryInterface = Depends(get_logging_repository)
+):
+    """
+    Retrieve logs for a specific account.
+    """
+    try:
+        logger.info(f"Retrieving logs for account {account_id}")
+        logs = logging_repo.get_logs_by_account_id(account_id)
         
-#         return [
-#             LogEntry(
-#                 logId=log.log_id,
-#                 timestamp=log.timestamp.isoformat(),
-#                 level=log.level,
-#                 message=log.message,
-#                 transactionId=log.transaction_id,
-#                 accountId=log.account_id
-#             ) for log in logs
-#         ]
-#     except KeyError:
-#         raise HTTPException(status_code=404, detail=f"Account {account_id} not found")
-#     except Exception as e:
-#         logger.exception(f"Error retrieving account logs: {str(e)}")
-#         raise HTTPException(status_code=500, detail=str(e))
+        return [
+            LogEntry(
+                logId=log.log_id,
+                timestamp=log.timestamp.isoformat(),
+                level=log.level,
+                message=log.message,
+                transactionId=log.transaction_id,
+                accountId=log.account_id
+            ) for log in logs
+        ]
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Account {account_id} not found")
+    except Exception as e:
+        logger.exception(f"Error retrieving account logs: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("api_endpoints:app", host="0.0.0.0", port=8000, reload=True)
