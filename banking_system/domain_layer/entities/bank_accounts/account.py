@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import uuid
 
-from ...util.validators import float_greater_than_zero
+from banking_system.domain_layer import float_greater_than_zero, validate_transaction
 
 
 from ..transaction import Transaction, TransactionType
@@ -60,17 +60,9 @@ class Account(ABC):
         self.status = AccountStatus.ACTIVE
         self.creation_date = datetime.now()
 
-   
+    @validate_transaction("withdraw")  # Add parentheses to use the decorator factory
     def withdraw(self, amount: float):
         """Withdraw money from the account. Specialized behavior for different account types."""
-        if not self.is_active():
-            raise ValueError("Cannot withdraw from a closed account.")
-
-        if amount <= 0:
-            raise ValueError("Withdrawal amount must be positive.")
-
-        if amount > self.balance:
-            raise ValueError("Insufficient funds for withdrawal.")
         self._validate_before_withdraw(amount)
 
         self.balance -= amount
@@ -95,6 +87,27 @@ class Account(ABC):
     def _validate_before_withdraw(self, amount: float):
         """Validate conditions before allowing withdrawal. Specialized behavior for different account types."""
         pass
+
+    def transfer(self, amount: float, destination_account):
+        """Transfer money to another account."""
+        if not self.is_active():
+            raise ValueError("Cannot transfer from a closed account.")
+
+        if not destination_account.is_active():
+            raise ValueError("Cannot transfer to a closed account.")
+
+        if amount <= 0:
+            raise ValueError("Transfer amount must be positive.")
+
+        if amount > self.balance:
+            raise ValueError("Insufficient funds for transfer.")
+
+        # Perform the withdrawal and deposit
+        self.withdraw(amount)
+        destination_account.deposit(amount)
+
+        #create a record of the transaction
+        return Transaction(account_id=self.account_id, destination_account_id=destination_account.account_id,amount=amount,transaction_type=TransactionType.TRANSFER)
 
     def __repr__(self):
         return (

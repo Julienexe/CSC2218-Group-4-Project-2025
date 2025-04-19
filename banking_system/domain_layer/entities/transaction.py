@@ -10,6 +10,7 @@ from ..util.validators import float_greater_than_zero
 class TransactionType(Enum):
     DEPOSIT = "DEPOSIT"
     WITHDRAW = "WITHDRAW"
+    TRANSFER = "TRANSFER"
 
 
 class Transaction:
@@ -39,12 +40,16 @@ class Transaction:
         self.amount = amount
         self.timestamp = datetime.now()
         self.account_id = account_id
+        self.destination_account_id = None  # For transfer transactions, this will be set later
 
     def is_deposit(self) -> bool:
         return self.transaction_type == TransactionType.DEPOSIT
 
     def is_withdrawal(self) -> bool:
         return self.transaction_type == TransactionType.WITHDRAW
+    
+    def is_transfer(self) -> bool:
+        return self.transaction_type == TransactionType.TRANSFER
 
     def __repr__(self):
         return (
@@ -52,5 +57,6 @@ class Transaction:
             f"type={self.transaction_type.value}, "
             f"amount={self.amount}, "
             f"account_id={self.account_id}, "
+            f"destination_account_id={self.destination_account_id if self.destination_account_id else None}, "
             f"timestamp={self.timestamp.isoformat()})>"
         )
