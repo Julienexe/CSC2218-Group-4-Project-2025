@@ -46,6 +46,9 @@ from banking_system.infrastructure_layer.transaction_repository import (
 from banking_system.infrastructure_layer.strategies.dictionary_strategy import (
     DictionaryStrategy,
 )
+from banking_system.infrastructure_layer.strategies.dictionary_transaction_strategy import(
+    DictionaryTransactionStrategy
+)
 
 # Define what gets imported with `from banking_system import *`
 __all__ = [
@@ -63,6 +66,7 @@ __all__ = [
     "AccountRepositoryInterface",
     "DictionaryStrategy",
     "TransactionRepositoryInterface",
+    "DictionaryTransactionStrategy",
 ]
 
 # Optional: Initialize package-wide configurations
