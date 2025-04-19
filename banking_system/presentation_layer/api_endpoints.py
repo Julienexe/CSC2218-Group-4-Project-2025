@@ -14,7 +14,7 @@ from banking_system.application_layer.services import AccountService, Transactio
 from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
 
 # Import concrete repository implementations
-from banking_system import AccountRepository, TransactionRepository,DictionaryStrategy
+from banking_system import AccountRepository, TransactionRepository,DictionaryStrategy, DictionaryTransactionStrategy
 # Import Week 2 additional services and repositories
 from banking_system.application_layer.services import FundTransferService, NotificationService
 from banking_system.application_layer.repository_interfaces import LoggingRepositoryInterface
@@ -98,7 +98,7 @@ def get_account_repository() -> AccountRepositoryInterface:
 
 def get_transaction_repository() -> TransactionRepositoryInterface:
     """Provides an instance of the transaction repository."""
-    return TransactionRepository()
+    return TransactionRepository(strategy=DictionaryTransactionStrategy())
 
 def get_logging_repository() -> LoggingRepositoryInterface:
     """Provides an instance of the logging repository."""
