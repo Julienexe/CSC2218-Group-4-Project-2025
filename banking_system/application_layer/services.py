@@ -72,10 +72,8 @@ class FundTransferService:
         self.account_repository.update_account(source_account)
 
         withdrawal_transaction = Transaction(
-            transactionId=str(uuid4()),
-            transactionType="WITHDRAW",
+            transaction_type=TransactionType.WITHDRAW,
             amount=amount,
-            timestamp=datetime.now(),
             account_id=source_account_id
         )
         self.transaction_repository.save_transaction(withdrawal_transaction)
@@ -85,10 +83,8 @@ class FundTransferService:
         self.account_repository.update_account(destination_account)
 
         deposit_transaction = Transaction(
-            transactionId=str(uuid4()),
-            transactionType="DEPOSIT",
+            transaction_type=TransactionType.DEPOSIT,
             amount=amount,
-            timestamp=datetime.now(),
             account_id=destination_account_id
         )
         self.transaction_repository.save_transaction(deposit_transaction)
@@ -108,7 +104,7 @@ class NotificationService:
         # Example notification logic (can be replaced with actual email/SMS integration)
         message = (
             f"Transaction Notification:\n"
-            f"Type: {transaction.transactionType}\n"
+            f"Type: {transaction.transaction_type}\n"
             f"Amount: ${transaction.amount:.2f}\n"
             f"Date: {transaction.timestamp}\n"
             f"Account ID: {transaction.account_id}\n"
@@ -130,7 +126,7 @@ class LoggingService:
         """
         log_message = (
             f"Transaction Log:\n"
-            f"Type: {transaction.transactionType}\n"
+            f"Type: {transaction.transaction_type}\n"
             f"Amount: ${transaction.amount:.2f}\n"
             f"Date: {transaction.timestamp}\n"
             f"Account ID: {transaction.account_id}\n"
