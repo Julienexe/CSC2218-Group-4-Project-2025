@@ -19,7 +19,7 @@ from banking_system import AccountRepository, TransactionRepository,DictionarySt
 from banking_system.application_layer.services import FundTransferService, NotificationService
 from banking_system.application_layer.repository_interfaces import LoggingRepositoryInterface
 from banking_system import AccountRepository, TransactionRepository
-from banking_system.infrastructure_layer.logger import Logger as LoggingRepository
+from banking_system.infrastructure_layer.logging_repository import LoggingRepository
 from banking_system.infrastructure_layer.notifications.mock_notification_adapter import MockNotificationAdapter as NotificationAdapter
 
 app = FastAPI(title="Banking Application API")
