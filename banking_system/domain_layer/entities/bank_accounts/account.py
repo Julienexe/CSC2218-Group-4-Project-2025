@@ -101,6 +101,9 @@ class Account(ABC):
         #create a record of the transaction
         return Transaction(account_id=self.account_id, destination_account_id=destination_account.account_id,amount=amount,transaction_type=TransactionType.TRANSFER)
 
+    def calculate_interest(self, rate: float) -> float:
+        pass
+
     def __repr__(self):
         return (
             f"<Account(id={self.account_id}, "
