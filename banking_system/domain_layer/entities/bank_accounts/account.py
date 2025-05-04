@@ -103,7 +103,7 @@ class Account(ABC):
         return Transaction(account_id=self.account_id, destination_account_id=destination_account.account_id,amount=amount,transaction_type=TransactionType.TRANSFER)
 
     def calculate_interest(self, rate: float) -> float:
-        self.interest_strategy.apply_interest(self.balance, rate)
+        self.balance = self.interest_strategy.apply_interest(self.balance, rate)
 
     def __repr__(self):
         return (
