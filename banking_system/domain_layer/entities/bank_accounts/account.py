@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import uuid
 
-from banking_system.domain_layer import float_greater_than_zero, validate_transaction
+from domain_layer import float_greater_than_zero, validate_transaction,InterestStrategy
 
 
 from ..transaction import Transaction, TransactionType
@@ -50,7 +50,7 @@ class Account(ABC):
             Returns a string representation of the account, including its ID, type, 
             balance, status, and creation date.
     """
-    def __init__(self, account_type: AccountType, initial_balance: float = 5.0):
+    def __init__(self, account_type: AccountType, initial_balance: float = 5.0,interest_strategy:InterestStrategy=None):
         # Ensure initial balance is positive
         if not float_greater_than_zero(initial_balance):
             raise ValueError("Initial balance cannot be negative.")
@@ -59,6 +59,7 @@ class Account(ABC):
         self.balance = initial_balance
         self.status = AccountStatus.ACTIVE
         self.creation_date = datetime.now()
+        self.interest_strategy = interest_strategy
 
     @validate_transaction("withdraw")  # Add parentheses to use the decorator factory
     def withdraw(self, amount: float):
@@ -100,6 +101,9 @@ class Account(ABC):
 
         #create a record of the transaction
         return Transaction(account_id=self.account_id, destination_account_id=destination_account.account_id,amount=amount,transaction_type=TransactionType.TRANSFER)
+
+    def calculate_interest(self, rate: float) -> float:
+        self.interest_strategy.apply_interest(self.balance, rate)
 
     def __repr__(self):
         return (
