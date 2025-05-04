@@ -4,6 +4,7 @@ from datetime import datetime
 from banking_system import Transaction, TransactionType, Account, CheckingAccount, SavingsAccount
 from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
 from domain_layer import validate_transaction
+from .util import abstractions
 
 class AccountService:
     def __init__(self, account_repository: AccountRepositoryInterface):
@@ -52,7 +53,7 @@ class FundTransferService:
         """
 
         # Get the source and destination accounts
-        source_account = self.account_repository.get_account_by_id(source_account_id)
+        source_account:Account = self.account_repository.get_account_by_id(source_account_id)
         destination_account = self.account_repository.get_account_by_id(destination_account_id)
 
         if not source_account:
@@ -61,6 +62,14 @@ class FundTransferService:
             raise ValueError(f"Destination account with ID {destination_account_id} not found")
 
         transfer_transaction = source_account.transfer(amount, destination_account)
+        abstractions.save_transaction(
+            self.account_repository, 
+            self.transaction_repository, 
+            self.notification_service, 
+            self.logging_service, 
+            source_account, 
+            transfer_transaction
+        )
 
         
 
@@ -126,12 +135,14 @@ class TransactionService:
 
         transaction = account.deposit(amount)
 
-        self.account_repository.update_account(account)
-        self.transaction_repository.save_transaction(transaction)
-
-        # Notify and log the transaction
-        self.notification_service.notify(transaction)
-        self.logging_service.log_transaction(transaction)
+        abstractions.save_transaction(
+            self.account_repository, 
+            self.transaction_repository, 
+            self.notification_service, 
+            self.logging_service, 
+            account, 
+            transaction
+        )
 
         return transaction
 
@@ -148,12 +159,14 @@ class TransactionService:
         
         transaction = account.withdraw(amount)
 
-        self.account_repository.update_account(account)
-        self.transaction_repository.save_transaction(transaction)
-
-        # Notify and log the transaction
-        self.notification_service.notify(transaction)
-        self.logging_service.log_transaction(transaction)
+        abstractions.save_transaction(
+            self.account_repository, 
+            self.transaction_repository, 
+            self.notification_service, 
+            self.logging_service, 
+            account, 
+            transaction
+        )
 
         return transaction
 
