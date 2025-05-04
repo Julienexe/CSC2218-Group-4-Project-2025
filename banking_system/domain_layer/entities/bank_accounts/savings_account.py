@@ -1,5 +1,5 @@
 # Example of specialized behavior
-from banking_system.domain_layer.entities.bank_accounts.account import Account
+from banking_system import Account
 
 
 class SavingsAccount(Account):
@@ -8,4 +8,5 @@ class SavingsAccount(Account):
     def _validate_before_withdraw(self, amount):
         if self.balance - amount < self.MINIMUM_BALANCE:
             raise ValueError("Cannot withdraw: minimum balance requirement not met.")
+    
 
