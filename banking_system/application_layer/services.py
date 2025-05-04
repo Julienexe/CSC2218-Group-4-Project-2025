@@ -1,10 +1,9 @@
 # banking_system/application_layer/account_creation_service.py
 from uuid import uuid4
 from datetime import datetime
-from banking_system import Transaction
-from banking_system import CheckingAccount
-from banking_system import SavingsAccount
+from banking_system import Transaction, TransactionType, Account, CheckingAccount, SavingsAccount
 from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
+from domain_layer import validate_transaction
 
 class AccountService:
     def __init__(self, account_repository: AccountRepositoryInterface):
@@ -51,8 +50,6 @@ class FundTransferService:
         Transfers the specified amount from the source account to the destination account.
         Returns a dictionary containing the withdrawal and deposit transactions.
         """
-        if amount <= 0:
-            raise ValueError("Transfer amount must be positive")
 
         # Get the source and destination accounts
         source_account = self.account_repository.get_account_by_id(source_account_id)
@@ -63,38 +60,9 @@ class FundTransferService:
         if not destination_account:
             raise ValueError(f"Destination account with ID {destination_account_id} not found")
 
-        # Check for sufficient funds in the source account
-        if source_account.balance < amount:
-            raise ValueError("Insufficient funds in the source account")
+        transfer_transaction = source_account.transfer(amount, destination_account)
 
-        # Withdraw from the source account
-        source_account.balance -= amount
-        self.account_repository.update_account(source_account)
-
-        withdrawal_transaction = Transaction(
-            transaction_type=TransactionType.WITHDRAW,
-            amount=amount,
-            account_id=source_account_id
-        )
-        self.transaction_repository.save_transaction(withdrawal_transaction)
-
-        # Deposit into the destination account
-        destination_account.balance += amount
-        self.account_repository.update_account(destination_account)
-
-        deposit_transaction = Transaction(
-            transaction_type=TransactionType.DEPOSIT,
-            amount=amount,
-            account_id=destination_account_id
-        )
-        self.transaction_repository.save_transaction(deposit_transaction)
-
-        # Return both transactions for reference
-        return {
-            "withdrawal": withdrawal_transaction,
-            "deposit": deposit_transaction
-        }
-
+        
 
 class NotificationService:
     def notify(self, transaction):
@@ -150,27 +118,15 @@ class TransactionService:
         Deposits the specified amount into the account.
         Returns a Transaction object representing the deposit.
         """
-        if amount <= 0:
-            raise ValueError("Deposit amount must be positive")
 
         # Get the account using the repository interface
         account = self.account_repository.get_account_by_id(account_id)
         if not account:
             raise ValueError(f"Account with ID {account_id} not found")
 
-        # Update the account balance
-        account.balance += amount
+        transaction = account.deposit(amount)
+
         self.account_repository.update_account(account)
-
-        # Create and save the transaction using the repository interface
-        transaction = Transaction(
-            transactionId=str(uuid4()),
-            transactionType="DEPOSIT",
-            amount=amount,
-            timestamp=datetime.now(),
-            account_id=account_id
-        )
-
         self.transaction_repository.save_transaction(transaction)
 
         # Notify and log the transaction
@@ -184,31 +140,15 @@ class TransactionService:
         Withdraws the specified amount from the account if sufficient funds are available.
         Returns a Transaction object representing the withdrawal.
         """
-        if amount <= 0:
-            raise ValueError("Withdrawal amount must be positive")
 
         # Get the account using the repository interface
-        account = self.account_repository.get_account_by_id(account_id)
+        account:Account = self.account_repository.get_account_by_id(account_id)
         if not account:
             raise ValueError(f"Account with ID {account_id} not found")
+        
+        transaction = account.withdraw(amount)
 
-        # Check for sufficient funds
-        if account.balance < amount:
-            raise ValueError("Insufficient funds")
-
-        # Update the account balance
-        account.balance -= amount
         self.account_repository.update_account(account)
-
-        # Create and save the transaction using the repository interface
-        transaction = Transaction(
-            transactionId=str(uuid4()),
-            transactionType="WITHDRAW",
-            amount=amount,
-            timestamp=datetime.now(),
-            account_id=account_id
-        )
-
         self.transaction_repository.save_transaction(transaction)
 
         # Notify and log the transaction
@@ -216,3 +156,78 @@ class TransactionService:
         self.logging_service.log_transaction(transaction)
 
         return transaction
+
+
+class InterestService:
+    def __init__(self, account_repository: AccountRepositoryInterface):
+        self.account_repository = account_repository
+
+    def apply_interest_to_account(self, account_id):
+        """
+        Applies interest to a specific account based on its type and balance.
+        """
+        account = self.account_repository.get_account_by_id(account_id)
+        if not account:
+            raise ValueError(f"Account with ID {account_id} not found")
+
+        interest_rate = 0.02 if account.account_type == "SAVINGS" else 0.01
+        interest = account.balance * interest_rate
+        account.balance += interest
+        self.account_repository.update_account(account)
+        return interest
+
+    def apply_interest_batch(self, account_ids):
+        """
+        Applies interest to a batch of accounts.
+        """
+        results = {}
+        for account_id in account_ids:
+            try:
+                interest = self.apply_interest_to_account(account_id)
+                results[account_id] = interest
+            except ValueError as e:
+                results[account_id] = str(e)
+        return results
+
+
+class LimitEnforcementService:
+    def __init__(self):
+        self.daily_limits = {}
+        self.monthly_limits = {}
+
+    def check_limit(self, account_id, transaction_amount):
+        """
+        Checks if the transaction amount exceeds daily or monthly limits.
+        """
+        daily_limit = self.daily_limits.get(account_id, 0)
+        monthly_limit = self.monthly_limits.get(account_id, 0)
+
+        if daily_limit + transaction_amount > 5000:
+            return False  # Exceeds daily limit
+        if monthly_limit + transaction_amount > 20000:
+            return False  # Exceeds monthly limit
+
+        # Update limits
+        self.daily_limits[account_id] = daily_limit + transaction_amount
+        self.monthly_limits[account_id] = monthly_limit + transaction_amount
+        return True
+
+    def reset_limits_daily(self):
+        """
+        Resets daily limits for all accounts.
+        """
+        self.daily_limits = {}
+
+    def reset_limits_monthly(self):
+        """
+        Resets monthly limits for all accounts.
+        """
+        self.monthly_limits = {}
+
+
+class StatementService:
+    def __init__(self, transaction_repository: TransactionRepositoryInterface):
+        self.transaction_repository = transaction_repository
+
+    def generate_statement(self, account_id, start_date, end_date):
+        """
