@@ -93,7 +93,7 @@ class Account(ABC):
         pass
 
     @validate_transaction("transfer")
-    def transfer(self, amount: float, destination_account:Account) -> Transaction:
+    def transfer(self, amount: float, destination_account) -> Transaction:
         """Transfer money to another account."""
            
 
