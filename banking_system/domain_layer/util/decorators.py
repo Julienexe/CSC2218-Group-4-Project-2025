@@ -16,3 +16,13 @@ def validate_transaction(action):
             return func(self, amount, *args, **kwargs)
         return wrapper
     return decorator
+
+def enforce_limits(method):
+    def wrapper(self, amount, *args, **kwargs):
+        if self.limit_constraint:
+            self.limit_constraint.validate(amount)
+        result = method(self, amount, *args, **kwargs)
+        if self.limit_constraint:
+            self.limit_constraint.record(amount)
+        return result
+    return wrapper
