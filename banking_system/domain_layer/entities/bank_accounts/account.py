@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import uuid
 
-from domain_layer import float_greater_than_zero, validate_transaction,InterestStrategy
+from domain_layer import float_greater_than_zero, validate_transaction,InterestStrategy, LimitConstraint
 
 
 from ..transaction import Transaction, TransactionType
@@ -50,7 +50,7 @@ class Account(ABC):
             Returns a string representation of the account, including its ID, type, 
             balance, status, and creation date.
     """
-    def __init__(self, account_type: AccountType, initial_balance: float = 5.0,interest_strategy:InterestStrategy=None):
+    def __init__(self, account_type: AccountType, initial_balance: float = 5.0,interest_strategy:InterestStrategy=None, limit_constraint:LimitConstraint=None):
         # Ensure initial balance is positive
         if not float_greater_than_zero(initial_balance):
             raise ValueError("Initial balance cannot be negative.")
@@ -60,13 +60,18 @@ class Account(ABC):
         self.status = AccountStatus.ACTIVE
         self.creation_date = datetime.now()
         self.interest_strategy = interest_strategy
+        self.limit_constraint = limit_constraint
 
     @validate_transaction("withdraw")  # Add parentheses to use the decorator factory
     def withdraw(self, amount: float):
         """Withdraw money from the account. Specialized behavior for different account types."""
         self._validate_before_withdraw(amount)
+        if self.limit_constraint:
+            self.limit_constraint.validate(amount)
 
         self.balance -= amount
+        if self.limit_constraint:
+            self.limit_constraint.record(amount=amount)
 
         #create a record of the transaction
         return Transaction(account_id=self.account_id, amount=amount,transaction_type=TransactionType.WITHDRAW)
@@ -104,6 +109,16 @@ class Account(ABC):
 
     def calculate_interest(self) -> float:
         self.balance = self.interest_strategy.apply_interest(self.balance)
+    
+    def generate_monthly_statement(self):
+        """Generate a monthly statement for the account."""
+        # This could be a complex object in a real-world scenario
+        return {
+            "account_id": self.account_id,
+            "balance": self.balance,
+            "interest_earned": self.interest_strategy.apply_interest(self.balance),
+            "transactions": [],  
+        }
 
     def __repr__(self):
         return (
