@@ -3,14 +3,14 @@ from uuid import uuid4
 from datetime import datetime
 from banking_system import Transaction, TransactionType, Account, CheckingAccount, SavingsAccount
 from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
-from domain_layer import InterestStrategy,SavingsInterestStrategy, CheckingInterestStrategy
+from domain_layer import InterestStrategy,SavingsInterestStrategy, CheckingInterestStrategy, LimitConstraint
 from .util import abstractions
 
 class AccountService:
     def __init__(self, account_repository: AccountRepositoryInterface):
         self.account_repository = account_repository
     
-    def create_account(self, account_type, initial_deposit=0.0,interest_rate=0.0):
+    def create_account(self, account_type, initial_deposit=0.0,interest_rate=0.05):
         """
         Creates a new account with the specified type and initial deposit amount.
         Returns the ID of the newly created account.
@@ -20,18 +20,23 @@ class AccountService:
         if account_type == "SAVINGS" and initial_deposit < 100.0:
             raise ValueError("Savings accounts require a minimum initial deposit of $100.00")
         
+        limit_constraint = LimitConstraint(daily_limit=1000.0, monthly_limit=5000.0)
+        # Create a limit constraint for the account
+        
         # Create a concrete account instance based on the account type
         if account_type == "CHECKING":
             account = CheckingAccount(
                 account_type=account_type,
                 initial_balance=initial_deposit,
                 interest_strategy=CheckingInterestStrategy(),
+                limit_constraint=limit_constraint,
             )
         elif account_type == "SAVINGS":
             account = SavingsAccount(
                 account_type=account_type,
                 initial_balance=initial_deposit,
                 interest_strategy=SavingsInterestStrategy(interest_rate),
+                limit_constraint=limit_constraint,
             )
         else:
             raise ValueError(f"Unsupported account type: {account_type}")
