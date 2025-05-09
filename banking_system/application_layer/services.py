@@ -3,18 +3,19 @@ from uuid import uuid4
 from datetime import datetime
 from banking_system import Transaction, TransactionType, Account, CheckingAccount, SavingsAccount
 from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
-from domain_layer import validate_transaction
+from domain_layer import InterestStrategy,SavingsInterestStrategy, CheckingInterestStrategy
 from .util import abstractions
 
 class AccountService:
     def __init__(self, account_repository: AccountRepositoryInterface):
         self.account_repository = account_repository
     
-    def create_account(self, account_type, initial_deposit=0.0):
+    def create_account(self, account_type, initial_deposit=0.0,interest_rate=0.0):
         """
         Creates a new account with the specified type and initial deposit amount.
         Returns the ID of the newly created account.
         """
+
         # Check minimum deposit requirements based on account type
         if account_type == "SAVINGS" and initial_deposit < 100.0:
             raise ValueError("Savings accounts require a minimum initial deposit of $100.00")
@@ -24,11 +25,13 @@ class AccountService:
             account = CheckingAccount(
                 account_type=account_type,
                 initial_balance=initial_deposit,
+                interest_strategy=CheckingInterestStrategy(),
             )
         elif account_type == "SAVINGS":
             account = SavingsAccount(
                 account_type=account_type,
                 initial_balance=initial_deposit,
+                interest_strategy=SavingsInterestStrategy(interest_rate),
             )
         else:
             raise ValueError(f"Unsupported account type: {account_type}")
@@ -169,3 +172,30 @@ class TransactionService:
         )
 
         return transaction
+    
+class InterestService:
+    def __init__(self, account_repository: AccountRepositoryInterface):
+        self.account_repository = account_repository
+
+    def apply_interest_to_account(self, account_id):
+        """
+        Applies interest to a specific account based on its type and balance.
+        """
+        account = self.account_repository.get_account_by_id(account_id)
+        if not account:
+            raise ValueError(f"Account with ID {account_id} not found")
+        account.calculate_interest()
+        self.account_repository.update_account(account)
+
+    def apply_interest_batch(self, account_ids):
+        """
+        Applies interest to a batch of accounts.
+        """
+        
+        for account_id in account_ids:
+            try:
+                self.apply_interest_to_account(account_id)
+
+            except ValueError as e:
+                pass
+   
