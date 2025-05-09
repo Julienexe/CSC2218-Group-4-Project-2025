@@ -219,6 +219,8 @@ class StatementService:
             raise ValueError(f"Account with ID {account_id} not found")
         
         statement = account.generate_monthly_statement()
+        transactions = self.get_transaction_history(account_id)
+        statement["transactions"] = transactions
         return statement
     
     def get_transaction_history(self, account_id):
@@ -230,4 +232,5 @@ class StatementService:
             raise ValueError(f"Account with ID {account_id} not found")
         
         transactions = self.transaction_repository.get_transactions_by_account_id(account_id)
-        return transactions
+        transaction_receipts = [repr(transaction) for transaction in transactions]
+        return transaction_receipts
