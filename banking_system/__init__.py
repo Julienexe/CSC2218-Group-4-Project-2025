@@ -43,9 +43,7 @@ from banking_system.infrastructure_layer.transaction_repository import (
     TransactionRepository,
 )
 
-from banking_system.infrastructure_layer.strategies.dictionary_strategy import (
-    DictionaryStrategy,
-)
+
 from banking_system.infrastructure_layer.strategies.dictionary_transaction_strategy import(
     DictionaryTransactionStrategy
 )
@@ -64,7 +62,6 @@ __all__ = [
     "AccountType",
     "Account",
     "AccountRepositoryInterface",
-    "DictionaryStrategy",
     "TransactionRepositoryInterface",
     "DictionaryTransactionStrategy",
 ]
