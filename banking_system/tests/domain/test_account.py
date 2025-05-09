@@ -10,26 +10,31 @@ from enum import Enum
 
 # Add the root directory of the project to the Python path
 sys.path.append(str(Path(__file__).resolve().parents[3]))
-from banking_system import AccountStatus, AccountType, SavingsAccount, CheckingAccount, TransactionType, Account
-from domain_layer import InterestStrategy, LimitConstraint
+from banking_system import AccountStatus, AccountType, SavingsAccount, CheckingAccount, Account
+from domain_layer import InterestStrategy, LimitConstraint, CheckingInterestStrategy,SavingsInterestStrategy
 
 @pytest.fixture
-def interest_strategy() -> InterestStrategy:
-    pass
+def savings_interest_strategy() -> InterestStrategy:
+    return SavingsInterestStrategy(annual_rate=0.05)
 
-def transaction_limits() -> LimitConstraint:
-    pass
+@pytest.fixture
+def checking_interest_strategy() -> InterestStrategy:
+    return CheckingInterestStrategy()
+
+@pytest.fixture
+def limit_constraint() -> LimitConstraint:
+    return LimitConstraint(daily_limit=500.0, monthly_limit=1500.0)
 
 
 @pytest.fixture
-def savings_account() -> SavingsAccount:
-    """Fixture to create a default SavingsAccount for testing."""
-    return SavingsAccount(account_type=AccountType.SAVINGS,initial_balance=500.0)
+def savings_account(savings_interest_strategy) -> SavingsAccount:
+    """Fixture to create a default SavingsAccount with no transaction limits for testing."""
+    return SavingsAccount(account_type=AccountType.SAVINGS,initial_balance=1500.0,interest_strategy=savings_interest_strategy,limit_constraint=None)
 
 @pytest.fixture
-def checking_account() -> CheckingAccount:
-    """Fixture to create a default CheckingAccount for testing."""
-    return CheckingAccount(account_type=AccountType.CHECKING,initial_balance=300.0)
+def checking_account(checking_interest_strategy) -> CheckingAccount:
+    """Fixture to create a default CheckingAccount with no transaction limits for testing."""
+    return CheckingAccount(account_type=AccountType.CHECKING,initial_balance=1500.0,interest_strategy=checking_interest_strategy,limit_constraint=None)
 
 # --- Test Account Initialization ---
 
@@ -117,7 +122,7 @@ def test_savings_withdraw_below_minimum(savings_account):
     withdraw_amount = savings_account.balance - SavingsAccount.MINIMUM_BALANCE + 1.0
     with pytest.raises(ValueError, match="minimum balance requirement not met"):
         savings_account.withdraw(withdraw_amount)
-    assert savings_account.balance == 500.0 # Balance should remain unchanged
+    assert savings_account.balance == 1500.0 # Balance should remain unchanged
 
 def test_savings_withdraw_negative_amount(savings_account):
     """Test withdrawing a negative amount from SavingsAccount."""
@@ -155,7 +160,7 @@ def test_checking_withdraw_insufficient_funds(checking_account):
     withdraw_amount = checking_account.balance + 1.0
     with pytest.raises(ValueError, match="Insufficient funds for withdraw."):
         checking_account.withdraw(withdraw_amount)
-    assert checking_account.balance == 300.0 # Balance should remain unchanged
+    assert checking_account.balance == 1500.0 # Balance should remain unchanged
 
 def test_checking_withdraw_negative_amount(checking_account):
     """Test withdrawing a negative amount from CheckingAccount."""
@@ -177,9 +182,9 @@ def test_checking_withdraw_from_closed_account(checking_account):
 
 def test_checking_get_balance(checking_account):
     """Test the get_balance method."""
-    assert checking_account.get_balance() == 300.0
+    assert checking_account.get_balance() == 1500.0
     checking_account.deposit(50.0)
-    assert checking_account.get_balance() == 350.0
+    assert checking_account.get_balance() == 1550.0
 
 def test_checking_get_status(checking_account):
     """Test the get_status method."""
@@ -215,8 +220,30 @@ def test_transfer_success(savings_account:Account, checking_account:Account):
     assert checking_account.balance == initial_checking_balance + transfer_amount
     assert transaction.timestamp <= datetime.now()  # Check if the timestamp is in the past
 
-def test_transaction_limits(savings_account):
-    pass
+def test_exceeding_daily_limit(savings_account,limit_constraint):
+    savings_account.limit_constraint = limit_constraint
+    savings_account.withdraw(400)
+    with pytest.raises(ValueError, match="Daily transaction limit exceeded."):
+        savings_account.withdraw(200)
+
+def test_exceeding_monthly_limit(savings_account,limit_constraint):
+    may_1 = datetime(2025,5,1)
+    may_2 = datetime(2025,5,2)
+
+    #day 1
+    limit_constraint = LimitConstraint(monthly_limit=1000, daily_limit=500, now_provider=make_now_provider(may_1))
+    savings_account.limit_constraint = limit_constraint
+    savings_account.withdraw(500)
+    
+    #day 2
+    limit_constraint.now_provider = make_now_provider(may_2)
+    savings_account.withdraw(400)
+    with pytest.raises(ValueError):
+        savings_account.withdraw(200)
+
+#helper for monthly limit test
+def make_now_provider(fixed_datetime):
+    return lambda: fixed_datetime
 
 def test_interest_implementation(savings_account):
     pass
