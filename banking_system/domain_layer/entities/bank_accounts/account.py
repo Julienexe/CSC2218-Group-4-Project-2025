@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import uuid
 
-from domain_layer import float_greater_than_zero, validate_transaction,InterestStrategy, LimitConstraint
+from domain_layer import float_greater_than_zero, validate_transaction,enforce_limits,InterestStrategy, LimitConstraint
 
 
 from ..transaction import Transaction, TransactionType
@@ -62,16 +62,13 @@ class Account(ABC):
         self.interest_strategy = interest_strategy
         self.limit_constraint = limit_constraint
 
-    @validate_transaction("withdraw")  # Add parentheses to use the decorator factory
+    @validate_transaction("withdraw")  
+    @enforce_limits
     def withdraw(self, amount: float):
         """Withdraw money from the account. Specialized behavior for different account types."""
         self._validate_before_withdraw(amount)
-        if self.limit_constraint:
-            self.limit_constraint.validate(amount)
-
+        
         self.balance -= amount
-        if self.limit_constraint:
-            self.limit_constraint.record(amount=amount)
 
         #create a record of the transaction
         return Transaction(account_id=self.account_id, amount=amount,transaction_type=TransactionType.WITHDRAW)
