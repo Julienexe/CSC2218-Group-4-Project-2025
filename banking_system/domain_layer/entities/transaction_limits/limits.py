@@ -1,16 +1,17 @@
 from datetime import datetime
 
 class LimitConstraint:
-    def __init__(self, daily_limit: float = None, monthly_limit: float = None):
+    def __init__(self, daily_limit: float = None, monthly_limit: float = None, now_provider:datetime=datetime.now):
         self.daily_limit = daily_limit
         self.monthly_limit = monthly_limit
+        self.now_provider:datetime = now_provider
         self._daily_total = 0.0
         self._monthly_total = 0.0
-        self._last_check = datetime.now().date()
+        self._last_check:datetime = self.now_provider()
 
     def _reset_if_needed(self):
-        today = datetime.now().date()
-        if today != self._last_check:
+        today:datetime = self.now_provider()
+        if today.date() != self._last_check.date():
             self._daily_total = 0.0
             if today.month != self._last_check.month:
                 self._monthly_total = 0.0
