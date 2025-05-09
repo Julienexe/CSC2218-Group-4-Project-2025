@@ -203,4 +203,31 @@ class InterestService:
 
             except ValueError as e:
                 pass
-   
+
+
+class StatementService:
+    def __init__(self, account_repository: AccountRepositoryInterface, transaction_repository: TransactionRepositoryInterface):
+        self.account_repository = account_repository
+        self.transaction_repository = transaction_repository
+
+    def generate_monthly_statement(self, account_id):
+        """
+        Generates a monthly statement for the specified account.
+        """
+        account = self.account_repository.get_account_by_id(account_id)
+        if not account:
+            raise ValueError(f"Account with ID {account_id} not found")
+        
+        statement = account.generate_monthly_statement()
+        return statement
+    
+    def get_transaction_history(self, account_id):
+        """
+        Retrieves the transaction history for the specified account.
+        """
+        account = self.account_repository.get_account_by_id(account_id)
+        if not account:
+            raise ValueError(f"Account with ID {account_id} not found")
+        
+        transactions = self.transaction_repository.get_transactions_by_account_id(account_id)
+        return transactions

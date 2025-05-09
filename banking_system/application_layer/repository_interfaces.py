@@ -1,7 +1,6 @@
-# banking_system/application_layer/interfaces/repositories.py
-
 from abc import ABC, abstractmethod
 from typing import List, Optional
+from domain_layer import Transaction
 
 class AccountRepositoryInterface(ABC):
     """
@@ -102,7 +101,7 @@ class TransactionRepositoryInterface(ABC):
         pass
     
     @abstractmethod
-    def get_transaction_by_id(self, transaction_id):
+    def get_transaction_by_id(self, transaction_id)->Transaction:
         """
         Retrieves a transaction by its ID.
         

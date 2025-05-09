@@ -109,7 +109,6 @@ class Account(ABC):
     
     def generate_monthly_statement(self):
         """Generate a monthly statement for the account."""
-        # This could be a complex object in a real-world scenario
         return {
             "account_id": self.account_id,
             "balance": self.balance,
