@@ -1,12 +1,13 @@
 from enum import Enum
 from abc import ABC, abstractmethod
 from datetime import datetime
-import uuid
+import uuid, sys
+from pathlib import Path
 
-from domain_layer import float_greater_than_zero, validate_transaction,enforce_limits,InterestStrategy, LimitConstraint
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+from domain_layer import validate_transaction,enforce_limits,float_greater_than_zero,Transaction, TransactionType, InterestStrategy, LimitConstraint
 
 
-from ..transaction import Transaction, TransactionType
 
 
 
@@ -92,10 +93,9 @@ class Account(ABC):
         pass
 
     @validate_transaction("transfer")
-    def transfer(self, amount: float, destination_account) -> Transaction:
+    def transfer(self, amount: float, destination_account:Account) -> Transaction:
         """Transfer money to another account."""
-        if not isinstance(destination_account, Account):
-            raise ValueError("Destination account must be a valid Account instance.")
+           
 
         # Perform the withdrawal and deposit
         self.withdraw(amount)
