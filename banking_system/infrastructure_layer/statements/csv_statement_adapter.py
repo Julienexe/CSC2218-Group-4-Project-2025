@@ -12,9 +12,7 @@ class CSVStatementAdapter(StatementAdapterInterface):
             writer = csv.writer(csvfile)
             # Header
             writer.writerow(['Account ID', data['account_id']])
-            writer.writerow(['Statement Period', data['period']])
-            writer.writerow(['Opening Balance', data['opening_balance']])
-            writer.writerow(['Closing Balance', data['closing_balance']])
+            writer.writerow(['Balance', data['balance']])
             writer.writerow([])
             # Transactions
             writer.writerow(['Transaction ID', 'Type', 'Amount', 'Timestamp'])
