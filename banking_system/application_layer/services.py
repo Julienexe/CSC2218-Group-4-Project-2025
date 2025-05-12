@@ -214,7 +214,7 @@ class StatementService:
         """
         Generates a monthly statement for the specified account.
         """
-        account = self.account_repository.get_account_by_id(account_id)
+        account:Account = self.account_repository.get_account_by_id(account_id)
         if not account:
             raise ValueError(f"Account with ID {account_id} not found")
         
