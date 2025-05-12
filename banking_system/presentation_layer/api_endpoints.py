@@ -14,12 +14,13 @@ from banking_system.application_layer.services import AccountService, Transactio
 from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
 
 # Import concrete repository implementations
-from banking_system import AccountRepository, TransactionRepository,DictionaryStrategy, DictionaryTransactionStrategy
+from banking_system import AccountRepository, TransactionRepository,DictionaryTransactionStrategy
+from banking_system.infrastructure_layer.strategies.dictionary_account_strategy import DictionaryAccountStrategy 
 # Import Week 2 additional services and repositories
 from banking_system.application_layer.services import FundTransferService, NotificationService
 from banking_system.application_layer.repository_interfaces import LoggingRepositoryInterface
 from banking_system import AccountRepository, TransactionRepository
-from banking_system.infrastructure_layer.logging_repository import LoggingRepository
+from banking_system.infrastructure_layer.logger import Logger 
 from banking_system.infrastructure_layer.notifications.mock_notification_adapter import MockNotificationAdapter as NotificationAdapter
 
 app = FastAPI(title="Banking Application API")
@@ -95,7 +96,7 @@ class LogEntry(BaseModel):
 # FastAPI dependency injection system for repositories and services
 def get_account_repository() -> AccountRepositoryInterface:
     """Provides an instance of the account repository."""
-    return AccountRepository(strategy= DictionaryStrategy())
+    return AccountRepository(strategy= DictionaryAccountStrategy())
 
 def get_transaction_repository() -> TransactionRepositoryInterface:
     """Provides an instance of the transaction repository."""
@@ -103,7 +104,7 @@ def get_transaction_repository() -> TransactionRepositoryInterface:
 
 def get_logging_repository() -> LoggingRepositoryInterface:
     """Provides an instance of the logging repository."""
-    return LoggingRepository()
+    return Logger()
 
 def get_notification_adapter() -> NotificationAdapter:
     """Provides an instance of the notification adapter."""
