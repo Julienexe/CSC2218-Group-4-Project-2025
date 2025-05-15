@@ -19,7 +19,7 @@ class AccountStatus(Enum):
 class AccountType(Enum):
     CHECKING = "CHECKING"
     SAVINGS = "SAVINGS"
-    # You can add more types like FIXED_DEPOSIT later
+    
 
 
 class Account(ABC):

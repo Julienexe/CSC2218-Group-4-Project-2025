@@ -50,7 +50,7 @@ class Transaction:
         self.amount = amount
         self.timestamp = datetime.now()
         self.account_id = account_id
-        self.destination_account_id = destination_account_id  # For transfer transactions, this will be set later
+        self.destination_account_id = destination_account_id  
 
     def is_deposit(self) -> bool:
         return self.transaction_type == TransactionType.DEPOSIT
