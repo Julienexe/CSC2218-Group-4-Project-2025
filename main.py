@@ -1,4 +1,9 @@
 import uvicorn
+from fastapi import FastAPI
+
+app = FastAPI(title="Banking Application API")
+
+
 
 def run_api():
     """Run the FastAPI application"""

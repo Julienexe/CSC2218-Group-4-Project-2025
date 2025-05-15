@@ -1,9 +1,11 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import HTTPException, Depends, status
 from typing import List, Optional
-from pydantic import BaseModel, constr, confloat
+from pydantic import BaseModel, confloat
 from enum import Enum
 import uvicorn
 import logging
+
+from domain_layer.entities.bank_accounts.account import Account, Transaction
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -14,17 +16,14 @@ from banking_system.application_layer.services import AccountService, Transactio
 from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
 
 # Import concrete repository implementations
-from banking_system import AccountRepository, TransactionRepository,DictionaryTransactionStrategy
-from banking_system.infrastructure_layer.strategies.dictionary_account_strategy import DictionaryAccountStrategy 
 # Import Week 2 additional services and repositories
 from banking_system.application_layer.services import FundTransferService, NotificationService
 from banking_system.application_layer.repository_interfaces import LoggingRepositoryInterface
-from banking_system import AccountRepository, TransactionRepository
 from banking_system.infrastructure_layer.logger import Logger 
-from banking_system.infrastructure_layer.notifications.mock_notification_adapter import MockNotificationAdapter as NotificationAdapter
-
-app = FastAPI(title="Banking Application API")
-
+from banking_system.infrastructure_layer.notifications.mock_notification_adapter import NotificationAdapter
+from banking_system.presentation_layer.monthly_statements.monthly_statemnts import *  # Register the statement route
+from main import app
+from banking_system.presentation_layer.utility.refactoring import get_account_repository,get_transaction_repository,get_logging_service
 # Data Models for API
 class account_type(str, Enum):
     CHECKING = "CHECKING"
@@ -94,19 +93,14 @@ class LogEntry(BaseModel):
     accountId: Optional[str] = None
 
 # FastAPI dependency injection system for repositories and services
-def get_account_repository() -> AccountRepositoryInterface:
-    """Provides an instance of the account repository."""
-    return AccountRepository(strategy= DictionaryAccountStrategy())
 
-def get_transaction_repository() -> TransactionRepositoryInterface:
-    """Provides an instance of the transaction repository."""
-    return TransactionRepository(strategy=DictionaryTransactionStrategy())
 
 def get_logging_repository() -> LoggingRepositoryInterface:
     """Provides an instance of the logging repository."""
     return Logger()
 
-def get_notification_adapter() -> NotificationAdapter:
+
+def get_notification_adapter():
     """Provides an instance of the notification adapter."""
     return NotificationAdapter()
 
@@ -121,7 +115,7 @@ def get_transaction_service(
     transaction_repo: TransactionRepositoryInterface = Depends(get_transaction_repository)
 ) -> TransactionService:
     """Provides an instance of the transaction service with its dependencies."""
-    return TransactionService(account_repo, transaction_repo)
+    return TransactionService(account_repo, transaction_repo,notification_service=get_notification_service(),logging_service=get_logging_service())
 
 # Week 2 - New service dependencies
 def get_fund_transfer_service(
@@ -129,10 +123,10 @@ def get_fund_transfer_service(
     transaction_repo: TransactionRepositoryInterface = Depends(get_transaction_repository)
 ) -> FundTransferService:
     """Provides an instance of the fund transfer service with its dependencies."""
-    return FundTransferService(account_repo, transaction_repo)
+    return FundTransferService(account_repo, transaction_repo,notification_service=get_notification_service(),logging_service=get_logging_service())
 
 def get_notification_service(
-    notification_adapter: NotificationAdapter = Depends(get_notification_adapter)
+    notification_adapter = get_notification_adapter()
 ) -> NotificationService:
     """Provides an instance of the notification service with its dependencies."""
     return NotificationService(notification_adapter)
@@ -150,8 +144,8 @@ async def create_account(
         # Log incoming request for debugging
         logger.info(f"Creating account: {request.dict()}")
         
-        account_id = account_service.create_account(request.account_type.value, request.initialDeposit)
-        account = account_repo.get_account_by_id(account_id)
+        account_id:str = account_service.create_account(request.account_type.value, request.initialDeposit)
+        account:Account = account_repo.get_account_by_id(account_id)
         
         logger.info(f"Account created with ID: {account_id}")
         
@@ -182,10 +176,10 @@ async def deposit_funds(
     """
     try:
         logger.info(f"Depositing {request.amount} to account {account_id}")
-        transaction = transaction_service.deposit(account_id, request.amount)
+        transaction:Transaction = transaction_service.deposit(account_id, request.amount)
         return TransactionResponse(
-            transactionId=transaction.transactionId,
-            transactionType=transaction.transactionType,
+            transactionId=transaction.transaction_id,
+            transactionType=transaction.transaction_type,
             amount=transaction.amount,
             timestamp=transaction.timestamp.isoformat(),
             account_id=transaction.account_id
@@ -211,8 +205,8 @@ async def withdraw_funds(
         logger.info(f"Withdrawing {request.amount} from account {account_id}")
         transaction = transaction_service.withdraw(account_id, request.amount)
         return TransactionResponse(
-            transactionId=transaction.transactionId,
-            transactionType=transaction.transactionType,
+            transactionId=transaction.transaction_id,
+            transactionType=transaction.transaction_type,
             amount=transaction.amount,
             timestamp=transaction.timestamp.isoformat(),
             account_id=transaction.account_id
@@ -235,7 +229,7 @@ async def get_balance(
     """
     try:
         logger.info(f"Getting balance for account {account_id}")
-        account = account_repo.get_account_by_id(account_id)
+        account:Account = account_repo.get_account_by_id(account_id)
         if not account:
             raise HTTPException(status_code=404, detail="Account not found")
         
@@ -262,12 +256,12 @@ async def get_transaction_history(
     """
     try:
         logger.info(f"Getting transactions for account {account_id}")
-        transactions = transaction_repo.get_transactions_by_account_id(account_id)
+        transactions:List[Transaction] = transaction_repo.get_transactions_by_account_id(account_id)
         
         return [
             TransactionResponse(
-                transactionId=tx.transactionId,
-                transactionType=tx.transactionType,
+                transactionId=tx.transaction_id,
+                transactionType=tx.transaction_type,
                 amount=tx.amount,
                 timestamp=tx.timestamp.isoformat(),
                 account_id=tx.account_id
@@ -291,14 +285,14 @@ async def transfer_funds(
     """
     try:
         logger.info(f"Transferring {request.amount} from account {request.sourceAccountId} to account {request.destinationAccountId}")
-        transfer = fund_transfer_service.transfer_funds(
+        transfer: Transaction = fund_transfer_service.transfer_funds(
             request.sourceAccountId, 
             request.destinationAccountId, 
             request.amount
         )
         
         return TransferResponse(
-            transactionId=transfer.transactionId,
+            transactionId=transfer.transaction_id,
             sourceAccountId=request.sourceAccountId,
             destinationAccountId=request.destinationAccountId,
             amount=request.amount,
@@ -323,7 +317,7 @@ async def subscribe_to_notifications(
     """
     try:
         logger.info(f"Subscribing to {request.notifyType} notifications for account {request.accountId}")
-        subscription = notification_service.subscribe(request.accountId, request.notifyType)
+        notification_service.subscribe(request.accountId, request.notifyType)
         
         return NotificationResponse(
             accountId=request.accountId,
@@ -363,58 +357,9 @@ async def unsubscribe_from_notifications(
         logger.exception(f"Error unsubscribing from notifications: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/logs/transactions", response_model=List[LogEntry])
-async def get_transaction_logs(
-    logging_repo: LoggingRepositoryInterface = Depends(get_logging_repository)
-):
-    """
-    Retrieve the transaction logs (primarily for administrative purposes).
-    """
-    try:
-        logger.info("Retrieving transaction logs")
-        logs = logging_repo.get_transaction_logs()
-        
-        return [
-            LogEntry(
-                logId=log.log_id,
-                timestamp=log.timestamp.isoformat(),
-                level=log.level,
-                message=log.message,
-                transactionId=log.transaction_id,
-                accountId=log.account_id
-            ) for log in logs
-        ]
-    except Exception as e:
-        logger.exception(f"Error retrieving transaction logs: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/accounts/{account_id}/logs", response_model=List[LogEntry])
-async def get_account_logs(
-    account_id: str,
-    logging_repo: LoggingRepositoryInterface = Depends(get_logging_repository)
-):
-    """
-    Retrieve logs for a specific account.
-    """
-    try:
-        logger.info(f"Retrieving logs for account {account_id}")
-        logs = logging_repo.get_logs_by_account_id(account_id)
-        
-        return [
-            LogEntry(
-                logId=log.log_id,
-                timestamp=log.timestamp.isoformat(),
-                level=log.level,
-                message=log.message,
-                transactionId=log.transaction_id,
-                accountId=log.account_id
-            ) for log in logs
-        ]
-    except KeyError:
-        raise HTTPException(status_code=404, detail=f"Account {account_id} not found")
-    except Exception as e:
-        logger.exception(f"Error retrieving account logs: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("api_endpoints:app", host="0.0.0.0", port=8000, reload=True)
+    
+    
