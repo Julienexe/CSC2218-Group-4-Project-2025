@@ -2,7 +2,7 @@
 from uuid import uuid4
 from datetime import datetime
 from banking_system import Transaction, TransactionType, Account, CheckingAccount, SavingsAccount
-from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface
+from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface, StatementAdapterInterface
 from domain_layer import InterestStrategy,SavingsInterestStrategy, CheckingInterestStrategy, LimitConstraint
 from .util import abstractions
 
@@ -206,9 +206,10 @@ class InterestService:
 
 
 class StatementService:
-    def __init__(self, account_repository: AccountRepositoryInterface, transaction_repository: TransactionRepositoryInterface):
+    def __init__(self, account_repository: AccountRepositoryInterface, transaction_repository: TransactionRepositoryInterface, statement_adapter: StatementAdapterInterface):
         self.account_repository = account_repository
         self.transaction_repository = transaction_repository
+        self.statement_adapter = statement_adapter
 
     def generate_monthly_statement(self, account_id):
         """
@@ -221,7 +222,7 @@ class StatementService:
         statement = account.generate_monthly_statement()
         transactions = self.get_transaction_history(account_id)
         statement["transactions"] = transactions
-        return statement
+        return self.statement_adapter.generate(statement)
     
     def get_transaction_history(self, account_id):
         """
