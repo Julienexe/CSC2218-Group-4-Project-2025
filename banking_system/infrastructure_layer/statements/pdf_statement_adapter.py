@@ -1,13 +1,14 @@
 from reportlab.lib.pagesizes import LETTER
 from reportlab.pdfgen import canvas
 from typing import Dict, Any
-from .statement_adapter import StatementAdapterInterface
+from banking_system import StatementAdapterInterface
 
 class PDFStatementAdapter(StatementAdapterInterface):
     """
     Generates a PDF account statement using ReportLab.
     """
-    def generate(self, data: Dict[str, Any], output_path: str) -> str:
+    def generate(self, data: Dict[str, Any]) -> str:
+        output_path = self._build_file_path(data['account_id'], '.pdf')
         c = canvas.Canvas(output_path, pagesize=LETTER)
         width, height = LETTER
         y = height - 50  # start from top
