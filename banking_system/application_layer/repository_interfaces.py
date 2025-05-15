@@ -118,11 +118,12 @@ class TransactionRepositoryInterface(ABC):
 
 # New interfaces for Week 2
 
-class NotificationRepositoryInterface(ABC):
-    """
-    Abstract interface for notification preferences repository operations.
-    To be implemented by concrete infrastructure classes.
-    """
+class NotificationAdapterInterface(ABC):
+ 
+    
+    @abstractmethod
+    def notify(message):
+        pass
     
     @abstractmethod
     def save_notification_preference(self, account_id, notification_type):

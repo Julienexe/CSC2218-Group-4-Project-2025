@@ -1,9 +1,9 @@
-# banking_system/application_layer/account_creation_service.py
+from typing import List
 from uuid import uuid4
 from datetime import datetime
 from banking_system import Transaction, TransactionType, Account, CheckingAccount, SavingsAccount
-from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, TransactionRepositoryInterface, StatementAdapterInterface
-from domain_layer import InterestStrategy,SavingsInterestStrategy, CheckingInterestStrategy, LimitConstraint
+from banking_system.application_layer.repository_interfaces import AccountRepositoryInterface, NotificationAdapterInterface, TransactionRepositoryInterface, StatementAdapterInterface
+from domain_layer import InterestStrategy,SavingsInterestStrategy, CheckingInterestStrategy, LimitConstraint, TransactionType
 from .util import abstractions
 
 class AccountService:
@@ -47,46 +47,19 @@ class AccountService:
         return account.account_id
 
 
-class FundTransferService:
-    def __init__(self, 
-                 account_repository: AccountRepositoryInterface, 
-                 transaction_repository: TransactionRepositoryInterface):
-        self.account_repository = account_repository
-        self.transaction_repository = transaction_repository
-
-    def transfer_funds(self, source_account_id, destination_account_id, amount):
-        """
-        Transfers the specified amount from the source account to the destination account.
-        Returns a dictionary containing the withdrawal and deposit transactions.
-        """
-
-        # Get the source and destination accounts
-        source_account:Account = self.account_repository.get_account_by_id(source_account_id)
-        destination_account = self.account_repository.get_account_by_id(destination_account_id)
-
-        if not source_account:
-            raise ValueError(f"Source account with ID {source_account_id} not found")
-        if not destination_account:
-            raise ValueError(f"Destination account with ID {destination_account_id} not found")
-
-        transfer_transaction = source_account.transfer(amount, destination_account)
-        abstractions.save_transaction(
-            self.account_repository, 
-            self.transaction_repository, 
-            self.notification_service, 
-            self.logging_service, 
-            source_account, 
-            transfer_transaction
-        )
 
         
 
 class NotificationService:
-    def notify(self, transaction):
+    def __init__(self, notification_adapter:NotificationAdapterInterface):
+        self.is_subscribed = False
+        self.adapter = notification_adapter
+        
+    def notify(self, transaction:Transaction):
         """
         Sends a notification (e.g., email/SMS) to the account owner(s) about the transaction.
         """
-        # Example notification logic (can be replaced with actual email/SMS integration)
+
         message = (
             f"Transaction Notification:\n"
             f"Type: {transaction.transaction_type}\n"
@@ -94,7 +67,13 @@ class NotificationService:
             f"Date: {transaction.timestamp}\n"
             f"Account ID: {transaction.account_id}\n"
         )
-        print(f"Notification sent: {message}")
+        self.adapter.notify(message)
+    
+    def subscribe(self):
+        self.is_subscribed = True
+    
+    def unsubscribe(self):
+        self.is_subscribed = False
 
 
 class LoggingService:
@@ -130,18 +109,18 @@ class TransactionService:
         self.notification_service = notification_service
         self.logging_service = logging_service
 
-    def deposit(self, account_id, amount):
+    def deposit(self, account_id, amount)->Transaction:
         """
         Deposits the specified amount into the account.
         Returns a Transaction object representing the deposit.
         """
 
         # Get the account using the repository interface
-        account = self.account_repository.get_account_by_id(account_id)
+        account:Account = self.account_repository.get_account_by_id(account_id)
         if not account:
             raise ValueError(f"Account with ID {account_id} not found")
 
-        transaction = account.deposit(amount)
+        transaction:Transaction = account.deposit(amount)
 
         abstractions.save_transaction(
             self.account_repository, 
@@ -232,6 +211,43 @@ class StatementService:
         if not account:
             raise ValueError(f"Account with ID {account_id} not found")
         
-        transactions = self.transaction_repository.get_transactions_by_account_id(account_id)
-        transaction_receipts = [repr(transaction) for transaction in transactions]
+        transactions:List[Transaction] = self.transaction_repository.get_transactions_by_account_id(account_id)
+        transaction_receipts = [transaction.return_dict() for transaction in transactions]
         return transaction_receipts
+    
+class FundTransferService:
+    def __init__(self, 
+                 account_repository: AccountRepositoryInterface, 
+                 transaction_repository: TransactionRepositoryInterface,
+                 notification_service: NotificationService,
+                 logging_service: LoggingService):
+        self.account_repository = account_repository
+        self.transaction_repository = transaction_repository
+        self.notification_service = notification_service
+        self.logging_service = logging_service
+
+    def transfer_funds(self, source_account_id, destination_account_id, amount):
+        """
+        Transfers the specified amount from the source account to the destination account.
+        Returns a dictionary containing the withdrawal and deposit transactions.
+        """
+
+        # Get the source and destination accounts
+        source_account:Account = self.account_repository.get_account_by_id(source_account_id)
+        destination_account = self.account_repository.get_account_by_id(destination_account_id)
+
+        if not source_account:
+            raise ValueError(f"Source account with ID {source_account_id} not found")
+        if not destination_account:
+            raise ValueError(f"Destination account with ID {destination_account_id} not found")
+
+        transfer_transaction = source_account.transfer(amount, destination_account)
+        abstractions.save_transaction(
+            self.account_repository, 
+            self.transaction_repository, 
+            self.notification_service, 
+            self.logging_service, 
+            source_account, 
+            transfer_transaction
+        )
+        return Transaction(transaction_type=TransactionType.TRANSFER,account_id=source_account,destination_account_id=destination_account,amount=amount)

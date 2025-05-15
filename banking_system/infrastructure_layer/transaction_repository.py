@@ -8,7 +8,7 @@ class TransactionRepository(TransactionRepositoryInterface):
         """
         Repository for transaction operations with pluggable storage strategy.
         """
-        self._strategy = strategy
+        self._strategy:TransactionRepositoryInterface = strategy
 
     def save_transaction(self, transaction: Transaction) -> str:
         """
@@ -20,7 +20,7 @@ class TransactionRepository(TransactionRepositoryInterface):
         """
         Retrieves all transactions for a specific account.
         """
-        return self._strategy.get_transactions_for_account(account_id)
+        return self._strategy.get_transactions_by_account_id(account_id)
 
     def save_transfer_transaction(self, transfer_transaction: Transaction) -> str:
         """
