@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Path, Body, HTTPException, status
+from fastapi import Path, Body, HTTPException, status
 from typing import Optional
 from datetime import date
-from banking_system.application_layer.services import  InterestService
-from banking_system import AccountRepository  
 from pydantic import BaseModel
 
-router = APIRouter()
+from banking_system.application_layer.services import InterestService
+from main import app  
+from banking_system.presentation_layer.utility.refactoring import get_account_repository
 
 # Response model
 class InterestAppliedResponse(BaseModel):
@@ -18,10 +18,10 @@ class InterestCalculationRequest(BaseModel):
     calculationDate: Optional[date] = None
 
 # Initialize service
-account_repository = AccountRepository()
+account_repository = get_account_repository()
 interest_service = InterestService(account_repository)
 
-@router.post(
+@app.post(
     "/accounts/{accountId}/interest/calculate",
     response_model=InterestAppliedResponse,
     status_code=status.HTTP_200_OK
@@ -42,7 +42,8 @@ def calculate_interest(
             message="Interest successfully applied.",
             new_balance=account.balance
         )
+
     except ValueError as ve:
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error.")
+        raise HTTPException(status_code=500, detail="Internal server error")

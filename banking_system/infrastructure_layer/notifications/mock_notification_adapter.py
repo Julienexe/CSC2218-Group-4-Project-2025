@@ -1,11 +1,25 @@
-from .notification_adapter import NotificationAdapterInterface
+from application_layer.repository_interfaces import NotificationAdapterInterface
 
-class MockNotificationAdapter(NotificationAdapterInterface):
-    """
-    A testing adapter that logs both email and SMS calls.
-    """
-    def send_email(self, recipient: str, subject: str, body: str) -> None:
-        print(f"[MOCK ADAPTER EMAIL] To: {recipient}, Subject: {subject} : {body}")
+class NotificationAdapter(NotificationAdapterInterface):
+    def __init__(self):
+        # {account_id: set of notification_types}
+        self._preferences = {}
 
-    def send_sms(self, number: str, message: str) -> None:
-        print(f"[MOCK ADAPTER SMS] To: {number}: {message}")
+    def notify(self, message):
+        # For demonstration, just print the message
+        print(f"Notification sent: {message}")
+
+    def save_notification_preference(self, account_id, notification_type):
+        if account_id not in self._preferences:
+            self._preferences[account_id] = set()
+        self._preferences[account_id].add(notification_type)
+        return True
+
+    def remove_notification_preference(self, account_id, notification_type):
+        if account_id in self._preferences and notification_type in self._preferences[account_id]:
+            self._preferences[account_id].remove(notification_type)
+            return True
+        return False
+
+    def get_notification_preferences(self, account_id):
+        return list(self._preferences.get(account_id, []))

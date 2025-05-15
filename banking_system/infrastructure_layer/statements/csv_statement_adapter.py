@@ -19,5 +19,5 @@ class CSVStatementAdapter(StatementAdapterInterface):
             # Transactions
             writer.writerow(['Transaction ID', 'Type', 'Amount', 'Timestamp'])
             for tx in data.get('transactions', []):
-                writer.writerow([tx['transaction_id'], tx['type'], tx['amount'], tx['timestamp']])
+                writer.writerow([tx['transaction_id'], tx['transaction_type'], tx['amount'], tx['timestamp']])
         return output_path

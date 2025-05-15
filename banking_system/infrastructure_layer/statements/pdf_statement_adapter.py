@@ -16,13 +16,7 @@ class PDFStatementAdapter(StatementAdapterInterface):
         c.setFont('Helvetica-Bold', 16)
         c.drawString(50, y, f"Account Statement for {data['account_id']}")
         y -= 30
-        c.setFont('Helvetica', 12)
-        c.drawString(50, y, f"Period: {data['period']}")
-        y -= 20
-        c.drawString(50, y, f"Opening Balance: {data['opening_balance']}")
-        y -= 20
-        c.drawString(50, y, f"Closing Balance: {data['closing_balance']}")
-        y -= 30
+        
         # Transactions Table Header
         c.setFont('Helvetica-Bold', 12)
         c.drawString(50, y, 'Txn ID')
@@ -37,7 +31,7 @@ class PDFStatementAdapter(StatementAdapterInterface):
                 c.showPage()
                 y = height - 50
             c.drawString(50, y, str(tx['transaction_id']))
-            c.drawString(150, y, tx['type'])
+            c.drawString(150, y, tx['transaction_type'])
             c.drawString(250, y, str(tx['amount']))
             c.drawString(350, y, tx['timestamp'])
             y -= 15

@@ -70,3 +70,13 @@ class Transaction:
             f"destination_account_id={self.destination_account_id if self.destination_account_id else None}, "
             f"timestamp={self.timestamp.isoformat()})>"
         )
+        
+    def return_dict(self):
+        return {
+            "transaction_id": self.transaction_id,
+            "transaction_type": self.transaction_type.value,
+            "amount": self.amount,
+            "account_id": self.account_id,
+            "destination_account_id": self.destination_account_id,
+            "timestamp": self.timestamp.isoformat()
+        }
