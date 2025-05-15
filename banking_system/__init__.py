@@ -32,7 +32,7 @@ from banking_system.application_layer.services import (
 )
 
 from banking_system.application_layer.repository_interfaces import(
-    AccountRepositoryInterface,TransactionRepositoryInterface
+    AccountRepositoryInterface,TransactionRepositoryInterface, StatementAdapterInterface
 )
 
 from banking_system.infrastructure_layer.account_repository import (
@@ -64,6 +64,7 @@ __all__ = [
     "AccountRepositoryInterface",
     "TransactionRepositoryInterface",
     "DictionaryTransactionStrategy",
+    "StatementAdapterInterface",
 ]
 
 # Optional: Initialize package-wide configurations
