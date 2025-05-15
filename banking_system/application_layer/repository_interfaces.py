@@ -1,4 +1,4 @@
-import os
+import os, datetime
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 from domain_layer import Transaction
@@ -264,3 +264,17 @@ class StatementAdapterInterface(ABC):
             The path to the generated file.
         """
         pass
+
+    def _build_file_path(self, account_id: str, file_extension: str) -> str:
+        """
+        Helper method to build the file path for the statement.
+
+        Args:
+            account_id: The ID of the account.
+            file_extension: The file extension (e.g., '.pdf', '.csv').
+
+        Returns:
+            The full file path for the statement.
+        """
+        current_date = datetime.datetime.now().strftime("%Y%m%d")
+        return f"{self.folder_name}/statement_{account_id}_{current_date}.{file_extension}"
