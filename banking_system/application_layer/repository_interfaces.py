@@ -1,6 +1,8 @@
+import os
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from domain_layer import Transaction
+
 
 class AccountRepositoryInterface(ABC):
     """
@@ -233,5 +235,32 @@ class LoggingRepositoryInterface(ABC):
             
         Returns:
             A list of log entries for the specified transaction
+        """
+        pass
+
+class StatementAdapterInterface(ABC):
+    def __init__(self, folder_name:str):
+        self.folder_name = folder_name
+        os.makedirs(folder_name, exist_ok=True)
+    """
+    Adapter interface to generate account statements in various formats.
+    """
+    @abstractmethod
+    def generate(self, data: Dict[str, Any]) -> str:
+        """
+        Generate a statement from structured data and save to output_path.
+
+        Args:
+            data: A dict containing statement details, e.g., {
+                'account_id': str,
+                'period': 'YYYY-MM',
+                'opening_balance': float,
+                'closing_balance': float,
+                'transactions': List[Dict],
+            }
+            output_path: File path where the statement will be saved.
+
+        Returns:
+            The path to the generated file.
         """
         pass
