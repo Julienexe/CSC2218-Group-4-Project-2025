@@ -69,11 +69,15 @@ class NotificationService:
         )
         self.adapter.notify(message)
     
-    def subscribe(self):
+    def subscribe(self,account_id, notification_type):
         self.is_subscribed = True
+        self.adapter.save_notification_preference(account_id, notification_type)
+        self.adapter.notify(f"Subscribed to {notification_type} notifications for account {account_id}")
     
-    def unsubscribe(self):
+    def unsubscribe(self,account_id, notification_type):
         self.is_subscribed = False
+        self.adapter.remove_notification_preference(account_id, notification_type)
+        self.adapter.notify(f"Unsubscribed from {notification_type} notifications for account {account_id}")
 
 
 class LoggingService:
