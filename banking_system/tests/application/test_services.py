@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 import pytest
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, patch, call, MagicMock
 from uuid import uuid4
 from datetime import datetime
 
@@ -10,11 +10,16 @@ from datetime import datetime
 from banking_system.application_layer.services import (
     LoggingService,
     NotificationService,
-    FundTransferService
+    FundTransferService,
+    AccountService, 
+    TransactionService, 
+    InterestService, 
+    StatementService
 )
 
 # Import necessary domain classes
-from banking_system import Transaction, TransactionType
+from banking_system import Transaction, TransactionType, Account, CheckingAccount, SavingsAccount
+from domain_layer import SavingsInterestStrategy, CheckingInterestStrategy, LimitConstraint
 
 class TestLoggingService:
     def setup_method(self):
@@ -50,193 +55,219 @@ class TestLoggingService:
             f"Account ID: {transaction.account_id}\n"
         )
         
-        # We're checking if print was called with a string that starts with "LOG: "
+        # check if print was called with a string that starts with "LOG: "
         # and contains the expected transaction information
         mock_print.assert_called_once()
         actual_call = mock_print.call_args[0][0]
         assert actual_call.startswith("LOG: ")
         assert expected_log_message in actual_call
 
-class TestNotificationService:
-    def setup_method(self):
-        self.notification_service = NotificationService()
-    
-    @patch('builtins.print')
-    def test_notify(self, mock_print):
-        # Create a mock transaction
-        transaction = Mock()
-        transaction.transaction_type = TransactionType.WITHDRAW
-        transaction.amount = 50.00
-        transaction.timestamp = datetime.now()
-        transaction.account_id = str(uuid4())
-        
-        # Send notification for the transaction
-        self.notification_service.notify(transaction)
-        
-        # Verify print was called with the notification message
-        expected_message = (
-            f"Transaction Notification:\n"
-            f"Type: {transaction.transaction_type}\n"
-            f"Amount: ${transaction.amount:.2f}\n"
-            f"Date: {transaction.timestamp}\n"
-            f"Account ID: {transaction.account_id}\n"
-        )
-        
-        mock_print.assert_called_once()
-        call_args = mock_print.call_args[0][0]
-        assert call_args.startswith("Notification sent: ")
-        assert expected_message in call_args
+class TestAccountService:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.mock_repo = MagicMock()
+        self.service = AccountService(self.mock_repo)
 
-class TestFundTransferService:
-    def setup_method(self):
-        # Create mock repositories
-        self.mock_account_repo = Mock()
-        self.mock_transaction_repo = Mock()
-        
-        # Create the service with mock repositories
-        self.fund_transfer_service = FundTransferService(
+    def test_create_checking_account(self):
+        self.mock_repo.create_account = MagicMock()
+        account_id = self.service.create_account("CHECKING", 200.0)
+        self.mock_repo.create_account.assert_called()
+        assert account_id is not None
+
+    def test_create_savings_account_minimum_deposit(self):
+        self.mock_repo.create_account = MagicMock()
+        account_id = self.service.create_account("SAVINGS", 200.0)
+        self.mock_repo.create_account.assert_called()
+        assert account_id is not None
+
+    def test_create_savings_account_below_minimum(self):
+        with pytest.raises(ValueError):
+            self.service.create_account("SAVINGS", 50.0)
+
+    def test_create_account_invalid_type(self):
+        with pytest.raises(ValueError):
+            self.service.create_account("BUSINESS", 100.0)
+
+class TestNotificationServiceNew:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.mock_adapter = MagicMock()
+        self.service = NotificationService(self.mock_adapter)
+
+    def test_notify(self):
+        transaction = MagicMock()
+        transaction.transaction_type = "DEPOSIT"
+        transaction.amount = 100.0
+        transaction.timestamp = "2024-01-01"
+        transaction.account_id = "acc1"
+        self.service.notify(transaction)
+        self.mock_adapter.notify.assert_called()
+
+    def test_subscribe(self):
+        self.service.subscribe("acc1", "EMAIL")
+        self.mock_adapter.save_notification_preference.assert_called_with("acc1", "EMAIL")
+        self.mock_adapter.notify.assert_called()
+        assert self.service.is_subscribed
+
+    def test_unsubscribe(self):
+        self.service.unsubscribe("acc1", "EMAIL")
+        self.mock_adapter.remove_notification_preference.assert_called_with("acc1", "EMAIL")
+        self.mock_adapter.notify.assert_called()
+        assert not self.service.is_subscribed
+
+class TestLoggingServiceNew:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.service = LoggingService()
+
+    def test_log(self):
+        with patch("builtins.print") as mock_print:
+            self.service.log("test message")
+            mock_print.assert_called_with("LOG: test message")
+
+    def test_log_transaction(self):
+        transaction = MagicMock()
+        transaction.transaction_type = "WITHDRAWAL"
+        transaction.amount = 50.0
+        transaction.timestamp = "2024-01-01"
+        transaction.account_id = "acc1"
+        with patch("builtins.print") as mock_print:
+            self.service.log_transaction(transaction)
+            assert mock_print.called
+
+class TestTransactionService:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.mock_account_repo = MagicMock()
+        self.mock_transaction_repo = MagicMock()
+        self.mock_notification = MagicMock()
+        self.mock_logging = MagicMock()
+        self.service = TransactionService(
             self.mock_account_repo,
-            self.mock_transaction_repo
+            self.mock_transaction_repo,
+            self.mock_notification,
+            self.mock_logging
         )
-        
-        # Create mock accounts
-        self.source_account_id = str(uuid4())
-        self.destination_account_id = str(uuid4())
-        
-        self.source_account = Mock()
-        self.source_account.account_id = self.source_account_id
-        self.source_account.balance = 1000.0
-        
-        self.destination_account = Mock()
-        self.destination_account.account_id = self.destination_account_id
-        self.destination_account.balance = 500.0
-        
-        # Configure mock repositories to return our mock accounts
-        self.mock_account_repo.get_account_by_id.side_effect = lambda account_id: {
-            self.source_account_id: self.source_account,
-            self.destination_account_id: self.destination_account
-        }.get(account_id)
-    
-    def test_successful_transfer(self):
-        # Test a successful transfer between two accounts
-        transfer_amount = 200.0
-        
-        # Execute the transfer
-        result = self.fund_transfer_service.transfer_funds(
-            self.source_account_id, 
-            self.destination_account_id, 
-            transfer_amount
+        self.mock_account = MagicMock()
+        self.mock_account.deposit.return_value = MagicMock()
+        self.mock_account.withdraw.return_value = MagicMock()
+        self.mock_account_repo.get_account_by_id.return_value = self.mock_account
+        patcher = patch("banking_system.application_layer.services.abstractions.save_transaction")
+        self.mock_save_transaction = patcher.start()
+        yield
+        patcher.stop()
+
+    def test_deposit_success(self):
+        transaction = self.service.deposit("acc1", 100.0)
+        self.mock_account.deposit.assert_called_with(100.0)
+        self.mock_save_transaction.assert_called()
+        assert transaction is not None
+
+    def test_deposit_account_not_found(self):
+        self.mock_account_repo.get_account_by_id.return_value = None
+        with pytest.raises(ValueError):
+            self.service.deposit("acc1", 100.0)
+
+    def test_withdraw_success(self):
+        transaction = self.service.withdraw("acc1", 50.0)
+        self.mock_account.withdraw.assert_called_with(50.0)
+        self.mock_save_transaction.assert_called()
+        assert transaction is not None
+
+    def test_withdraw_account_not_found(self):
+        self.mock_account_repo.get_account_by_id.return_value = None
+        with pytest.raises(ValueError):
+            self.service.withdraw("acc1", 50.0)
+
+class TestInterestService:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.mock_account_repo = MagicMock()
+        self.service = InterestService(self.mock_account_repo)
+        self.mock_account = MagicMock()
+        self.mock_account_repo.get_account_by_id.return_value = self.mock_account
+
+    def test_apply_interest_to_account_success(self):
+        self.service.apply_interest_to_account("acc1")
+        self.mock_account.calculate_interest.assert_called()
+        self.mock_account_repo.update_account.assert_called_with(self.mock_account)
+
+    def test_apply_interest_to_account_not_found(self):
+        self.mock_account_repo.get_account_by_id.return_value = None
+        with pytest.raises(ValueError):
+            self.service.apply_interest_to_account("acc1")
+
+    def test_apply_interest_batch(self):
+        self.mock_account_repo.get_account_by_id.return_value = self.mock_account
+        self.service.apply_interest_batch(["acc1", "acc2"])
+        assert self.mock_account.calculate_interest.called
+
+class TestStatementService:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.mock_account_repo = MagicMock()
+        self.mock_transaction_repo = MagicMock()
+        self.mock_statement_adapter = MagicMock()
+        self.service = StatementService(self.mock_account_repo, self.mock_transaction_repo, self.mock_statement_adapter)
+        self.mock_account = MagicMock()
+        self.mock_account.generate_monthly_statement.return_value = {"statement": "data"}
+        self.mock_account_repo.get_account_by_id.return_value = self.mock_account
+        self.mock_transaction_repo.get_transactions_by_account_id.return_value = [MagicMock(return_dict=lambda: {"id": 1})]
+        self.mock_statement_adapter.generate.return_value = "statement"
+
+    def test_generate_monthly_statement_success(self):
+        result = self.service.generate_monthly_statement("acc1")
+        assert result == "statement"
+        self.mock_statement_adapter.generate.assert_called()
+
+    def test_generate_monthly_statement_account_not_found(self):
+        self.mock_account_repo.get_account_by_id.return_value = None
+        with pytest.raises(ValueError):
+            self.service.generate_monthly_statement("acc1")
+
+    def test_get_transaction_history_success(self):
+        result = self.service.get_transaction_history("acc1")
+        assert isinstance(result, list)
+
+    def test_get_transaction_history_account_not_found(self):
+        self.mock_account_repo.get_account_by_id.return_value = None
+        with pytest.raises(ValueError):
+            self.service.get_transaction_history("acc1")
+
+class TestFundTransferServiceNew:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.mock_account_repo = MagicMock()
+        self.mock_transaction_repo = MagicMock()
+        self.mock_notification = MagicMock()
+        self.mock_logging = MagicMock()
+        self.service = FundTransferService(
+            self.mock_account_repo,
+            self.mock_transaction_repo,
+            self.mock_notification,
+            self.mock_logging
         )
-        
-        # Verify accounts were retrieved from the repository
-        self.mock_account_repo.get_account_by_id.assert_has_calls([
-            call(self.source_account_id),
-            call(self.destination_account_id)
-        ])
-        
-        # Verify balances were updated correctly
-        assert self.source_account.balance == 800.0  # 1000 - 200
-        assert self.destination_account.balance == 700.0  # 500 + 200
-        
-        # Verify accounts were updated in the repository
-        self.mock_account_repo.update_account.assert_has_calls([
-            call(self.source_account),
-            call(self.destination_account)
-        ])
-        
-        # Verify transactions were saved
-        assert self.mock_transaction_repo.save_transaction.call_count == 2
-        
-        # Verify the return value contains both transactions
-        assert "withdrawal" in result
-        assert "deposit" in result
-        assert result["withdrawal"].transaction_type == TransactionType.WITHDRAW
-        assert result["deposit"].transaction_type == TransactionType.DEPOSIT
-        assert result["withdrawal"].amount == transfer_amount
-        assert result["deposit"].amount == transfer_amount
-    
-    def test_transfer_insufficient_funds(self):
-        # Test a transfer with insufficient funds
-        transfer_amount = 1500.0  # More than source account balance
-        
-        # Execute the transfer and expect a ValueError
-        with pytest.raises(ValueError) as exc_info:
-            self.fund_transfer_service.transfer_funds(
-                self.source_account_id, 
-                self.destination_account_id, 
-                transfer_amount
-            )
-        
-        # Verify the error message
-        assert "Insufficient funds" in str(exc_info.value)
-        
-        # Verify no account updates or transactions occurred
-        self.mock_account_repo.update_account.assert_not_called()
-        self.mock_transaction_repo.save_transaction.assert_not_called()
-    
-    def test_transfer_invalid_amount(self):
-        # Test a transfer with a negative amount
-        transfer_amount = -100.0
-        
-        # Execute the transfer and expect a ValueError
-        with pytest.raises(ValueError) as exc_info:
-            self.fund_transfer_service.transfer_funds(
-                self.source_account_id, 
-                self.destination_account_id, 
-                transfer_amount
-            )
-        
-        # Verify the error message
-        assert "Transfer amount must be positive" in str(exc_info.value)
-        
-        # Verify no account updates or transactions occurred
-        self.mock_account_repo.update_account.assert_not_called()
-        self.mock_transaction_repo.save_transaction.assert_not_called()
-    
-    def test_transfer_source_account_not_found(self):
-        # Test a transfer with a non-existent source account
-        invalid_account_id = str(uuid4())
-        
-        # Configure mock repository to return None for this account ID
-        self.mock_account_repo.get_account_by_id.side_effect = lambda account_id: {
-            self.destination_account_id: self.destination_account
-        }.get(account_id)
-        
-        # Execute the transfer and expect a ValueError
-        with pytest.raises(ValueError) as exc_info:
-            self.fund_transfer_service.transfer_funds(
-                invalid_account_id,
-                self.destination_account_id, 
-                100.0
-            )
-        
-        # Verify the error message
-        assert f"Source account with ID {invalid_account_id} not found" in str(exc_info.value)
-        
-        # Verify no account updates or transactions occurred
-        self.mock_account_repo.update_account.assert_not_called()
-        self.mock_transaction_repo.save_transaction.assert_not_called()
-    
-    def test_transfer_destination_account_not_found(self):
-        # Test a transfer with a non-existent destination account
-        invalid_account_id = str(uuid4())
-        
-        # Configure mock repository to return None for this account ID
-        self.mock_account_repo.get_account_by_id.side_effect = lambda account_id: {
-            self.source_account_id: self.source_account
-        }.get(account_id)
-        
-        # Execute the transfer and expect a ValueError
-        with pytest.raises(ValueError) as exc_info:
-            self.fund_transfer_service.transfer_funds(
-                self.source_account_id,
-                invalid_account_id, 
-                100.0
-            )
-        
-        # Verify the error message
-        assert f"Destination account with ID {invalid_account_id} not found" in str(exc_info.value)
-        
-        # Verify no account updates or transactions occurred
-        self.mock_account_repo.update_account.assert_not_called()
-        self.mock_transaction_repo.save_transaction.assert_not_called()
+        self.mock_source_account = MagicMock()
+        self.mock_destination_account = MagicMock()
+        self.mock_account_repo.get_account_by_id.side_effect = lambda x: self.mock_source_account if x == "src" else self.mock_destination_account
+        patcher = patch("banking_system.application_layer.services.abstractions.save_transaction")
+        self.mock_save_transaction = patcher.start()
+        yield
+        patcher.stop()
+
+    def test_transfer_funds_success(self):
+        self.mock_source_account.transfer.return_value = MagicMock()
+        result = self.service.transfer_funds("src", "dst", 100.0)
+        self.mock_source_account.transfer.assert_called_with(100.0, self.mock_destination_account)
+        self.mock_save_transaction.assert_called()
+        assert result is not None
+
+    def test_transfer_funds_source_not_found(self):
+        self.mock_account_repo.get_account_by_id.side_effect = lambda x: None if x == "src" else self.mock_destination_account
+        with pytest.raises(ValueError):
+            self.service.transfer_funds("src", "dst", 100.0)
+
+    def test_transfer_funds_destination_not_found(self):
+        self.mock_account_repo.get_account_by_id.side_effect = lambda x: self.mock_source_account if x == "src" else None
+        with pytest.raises(ValueError):
+            self.service.transfer_funds("src", "dst", 100.0)
