@@ -22,6 +22,7 @@ from banking_system.application_layer.repository_interfaces import LoggingReposi
 from banking_system.infrastructure_layer.logger import Logger 
 from banking_system.infrastructure_layer.notifications.mock_notification_adapter import NotificationAdapter
 from banking_system.presentation_layer.monthly_statements.monthly_statemnts import *  # Register the statement route
+from banking_system.presentation_layer.interest_endpoints.interest_endpoints import *
 from main import app
 from banking_system.presentation_layer.utility.refactoring import get_account_repository,get_transaction_repository,get_logging_service
 # Data Models for API
@@ -130,6 +131,9 @@ def get_notification_service(
 ) -> NotificationService:
     """Provides an instance of the notification service with its dependencies."""
     return NotificationService(notification_adapter)
+
+
+
 
 @app.post("/accounts", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
 async def create_account(
